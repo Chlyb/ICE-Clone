@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.mygdx.game.menu.MainMenuScreen;
 
@@ -20,7 +21,7 @@ public class MyGdxGame extends Game {
 	public BitmapFont bf;
 
 	private  boolean paused;
-	
+
 	@Override
 	public void create () {
 		WIDTH = Gdx.graphics.getWidth();
@@ -28,11 +29,17 @@ public class MyGdxGame extends Game {
 
 		sr = new ShapeRenderer();
 		sb = new SpriteBatch();
-		bf = new BitmapFont(true);
+
+		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("data/line_pixel-7.ttf"));
+		FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+		parameter.size = 18;
+		parameter.flip = true;
+		bf = generator.generateFont(parameter);
+		generator.dispose();
 
 		this.setScreen(new MainMenuScreen(this));
 	}
-	
+
 	@Override
 	public void dispose () {
 	}

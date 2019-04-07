@@ -31,24 +31,24 @@ public class Ship extends Entity implements Serializable {
     }
 
     public void updateMoving(){
+        if(target != null){
+            if( target.health <= 0 || pos.cpy().sub(target.getPos()).len2() > 50*50) target = null;
+        }
+
         if(objective == null) vel.scl(0.8f);
         else{
             Vector2 v1 = new Vector2(objective.getX(), objective.getY()).sub(pos);
             v1.scl(0.0015f);
             if(v1.len2() > 1) v1.nor();
             vel.add(v1);
-            angle = v1.angle() - 90;
-            //angle = (angle + v1.angle() - 90)/2.0f;
-        }
-        if(target != null){
-            if( target.health <= 0 || pos.cpy().sub(target.getPos()).len2() > 50*50) target = null;
+            if(target == null) angle = v1.angle() - 90;
         }
     }
 
     public void updateShooting(float dt){
         if(target != null){
             shoot(dt);
-            angle = target.getPos().cpy().sub(getPos()).angle() - 90;
+            angle = target.getPos().cpy().sub(pos).angle() - 90;
         }
     }
 

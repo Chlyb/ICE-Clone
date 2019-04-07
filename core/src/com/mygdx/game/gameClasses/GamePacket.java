@@ -159,6 +159,7 @@ public class GamePacket implements Serializable{
             sb.begin();
 
             for (Flag flag : getFlags()) {
+                bf.setColor( colors[ flag.getTeam().color]);
                 GlyphLayout glyphLayout = new GlyphLayout();
                 glyphLayout.setText(bf, Integer.toString( (int)flag.getHealth()));
                 bf.draw(sb, glyphLayout, flag.getPos().x - glyphLayout.width / 2, flag.getPos().y - glyphLayout.height / 2);

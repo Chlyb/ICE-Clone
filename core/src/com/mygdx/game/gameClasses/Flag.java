@@ -44,7 +44,7 @@ public class Flag extends Entity implements Serializable {
             if(health <= 0){
                 changeTeam(shotBy.getTeam());
             }
-            else health += dt;
+            else health += 5 * dt;
         }
         angle += dt;
         cooldown -= dt;

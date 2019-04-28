@@ -27,7 +27,9 @@ public class Ship extends Entity implements Serializable {
         target.health -= team.getDamage() * dt;
         if(target instanceof Flag){
             ((Flag)target).shotBy = this;
+            if(target.health < 0) team.addScore(5);
         }
+        else if(target.health < 0) team.addScore(1);
     }
 
     public void updateMoving(){
@@ -35,15 +37,19 @@ public class Ship extends Entity implements Serializable {
             if( target.health <= 0 || pos.cpy().sub(target.getPos()).len2() > 50*50) target = null;
         }
 
-        if(objective == null) vel.scl(0.8f);
-        else{
+        vel.scl(0.9f);
+        if(objective != null) {
+            vel.scl(0.9f);
             Vector2 v1 = new Vector2(objective.getX(), objective.getY()).sub(pos);
-            v1.scl(0.0015f);
-            if(v1.len2() > 1) v1.nor();
+            v1.scl(0.003f);
+            if (v1.len2() > 1) v1.nor();
+
+            if (target == null) angle = v1.angle() - 90;
+
             vel.add(v1);
-            if(target == null) angle = v1.angle() - 90;
         }
     }
+
 
     public void updateShooting(float dt){
         if(target != null){
@@ -55,7 +61,7 @@ public class Ship extends Entity implements Serializable {
     public void move(float dt){
         if(vel.len2() > 1) vel.nor();
         Vector2 scaled = vel.cpy();
-        scaled.scl( 50 * dt);
+        scaled.scl( team.getSpeed() * dt);
         pos.add(scaled);
     }
 

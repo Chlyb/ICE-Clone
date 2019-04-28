@@ -34,6 +34,7 @@ public class LobbyPlayer extends AbstractScreen {
     public final String serverIP;
     public final String groupAddress;
 
+    private int playerIndex = -1;
 
     private Label flagLabel;
     private TextField messageField;
@@ -151,11 +152,15 @@ public class LobbyPlayer extends AbstractScreen {
 
     @Override
     public void render(float delta) {
+        clearScreen();
         super.render(delta);
+
+        if(playerIndex != -1){
+            game.setScreen(new MultiplayerClient(game, getThis(), playerIndex));
+        }
     }
 
     public void processPacket(DatagramPacket packet){
-        //String message = new String(packet.getData()).trim();
         String message = new String(packet.getData(), 0, packet.getLength());
 
         switch (message.charAt(0)){
@@ -173,7 +178,8 @@ public class LobbyPlayer extends AbstractScreen {
                 updateChat(message.substring(1));
                 break;
             case 's': //start
-                game.setScreen(new MultiplayerClient(game, getThis(), message.charAt(1)));
+                System.out.println("taka wiadomosc " + message);
+                playerIndex = message.charAt(1);
                 runThread = false;
                 break;
         }

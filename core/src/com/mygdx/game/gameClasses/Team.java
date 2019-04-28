@@ -8,14 +8,21 @@ import java.util.List;
 
 public class Team implements Serializable {
     public final GamePacket gp;
-    //public final Color color;
-    //public final Color darkColor;
     public final int color;
-    //public final int darkColor;
 
-    private int speed;
-    private int health;
     private int damage;
+    private int health;
+    private int speed;
+
+    private int score;
+    private int scoreToNextLevel;
+    private int avaibleUpgrades;
+    private int progressBarWidth;
+    private int level;
+    private int attackLevel;
+    private int healthLevel;
+    private int speedLevel;
+
     private List<Objective> objectives;
     private List<Ship> ships;
     private List<Flag> flags;
@@ -35,11 +42,20 @@ public class Team implements Serializable {
     public Team(GamePacket gp, int color) {
         this.gp = gp;
         this.color = color;
-        //this.darkColor = new Color(color.r/3,color.g/3,color.b/3,1);
 
-        speed = 5;
-        health = 5;
         damage = 5;
+        speed = 50;
+        health = 5;
+
+        score = 0;
+        scoreToNextLevel = 50;
+        progressBarWidth = 0;
+        avaibleUpgrades = 0;
+        level = 3;
+        attackLevel = 1;
+        healthLevel = 1;
+        speedLevel = 1;
+
         objectives = new ArrayList<Objective>();
         ships = new ArrayList<Ship>();
         flags = new ArrayList<Flag>();
@@ -54,11 +70,47 @@ public class Team implements Serializable {
         gp.addTeam(this);
     }
 
+    public void update(){
+        if(score > scoreToNextLevel){
+            score = score % scoreToNextLevel;
+            ++avaibleUpgrades;
+            ++level;
+            scoreToNextLevel += 100;
+
+            if(level == 30){
+                score = -2147483647;
+                scoreToNextLevel = 2147483647;
+            }
+        }
+        progressBarWidth = 960 * score / scoreToNextLevel;
+    }
+
+    public void upgrade(int upgrade){
+        if(avaibleUpgrades > 0){
+            if(upgrade == 0 && attackLevel < 10){
+                ++damage;
+                ++attackLevel;
+                --avaibleUpgrades;
+                ++level;
+            }
+            else if(upgrade == 1 && healthLevel < 10){
+                ++health;
+                ++healthLevel;
+                --avaibleUpgrades;
+                ++level;
+            }
+            else if(speedLevel < 10){
+                speed += 5;
+                ++speedLevel;
+                --avaibleUpgrades;
+                ++level;
+            }
+        }
+    }
+
     public void onPress(int x, int y) {
         Boolean deleted = false;
         for (Objective objective : objectives) {
-            //System.out.println(objective.getX() + " - " + objective.getY() );
-            //System.out.println(x + " - " + y);
 
             if (Math.pow((objective.getX() - x), 2) + Math.pow((objective.getY() - y), 2) <= Math.pow(objective.RADIUS, 2)) {
                 objective.delete();
@@ -67,11 +119,8 @@ public class Team implements Serializable {
             }
         }
         if (!deleted) {
-            //System.out.println("NIIIiiiiii");
             Vector2 v = new Vector2(x, y);
-            //System.out.println(v.x + "-" + v.y);
             new Objective(this, v);
-            //objectives.add(new Objective(this, new Vector2(x, y))
         }
     }
 
@@ -164,11 +213,18 @@ public class Team implements Serializable {
         }
     }
 
-    public int getHealth(){
-        return health;
-    }
     public int getDamage(){return damage;}
+    public int getHealth(){return health;}
+    public int getSpeed(){return speed;}
+
+    public int getAttackLevel(){return attackLevel;}
+    public int getHealthLevel(){return healthLevel;}
+    public int getSpeedLevel(){return speedLevel;}
+    public int getProgressBarWidth(){return progressBarWidth;}
+    public int getAvaibleUpgrades(){return avaibleUpgrades;}
     public void setHealth(int h){health = h;}
+    public void addScore(float score){ this.score += score;}
+
     public int getShipCount(){
         return shipCount;
     }
@@ -195,7 +251,6 @@ public class Team implements Serializable {
             System.out.println(x);
             if(x == 0){
                 if(!existingTeams.contains("Green")){
-                    //new Team(gp, new Color(0,1,0,1));
                     new Team(gp, 1);
                     existingTeams.add("Green");
                     ++currentenemyCount;
@@ -203,7 +258,6 @@ public class Team implements Serializable {
             }
             else if(x == 1){
                 if(!existingTeams.contains("Blue")){
-                    //new Team(gp, new Color(0,1,1,1));
                     new Team(gp, 2);
                     existingTeams.add("Blue");
                     ++currentenemyCount;
@@ -211,7 +265,6 @@ public class Team implements Serializable {
             }
             else if(x == 2){
                 if(!existingTeams.contains("Purple")){
-                    //new Team(gp, new Color(0.5f,0,0.5f,1));
                     new Team(gp, 3);
                     existingTeams.add("Purple");
                     ++currentenemyCount;
@@ -219,7 +272,6 @@ public class Team implements Serializable {
             }
             else if(x == 3){
                 if(!existingTeams.contains("Orange")){
-                    //new Team(gp, new Color(1,0.3f,0,1));
                     new Team(gp, 4);
                     existingTeams.add("Orange");
                     ++currentenemyCount;
@@ -227,7 +279,6 @@ public class Team implements Serializable {
             }
             else if(x == 4){
                 if(!existingTeams.contains("Red")){
-                    //new Team(gp, new Color(1,0,0,1));
                     new Team(gp, 5);
                     existingTeams.add("Red");
                     ++currentenemyCount;
@@ -267,7 +318,6 @@ public class Team implements Serializable {
                 for(Objective objective : objectives){ //delete unwanted objectives
                     if( !flagsToDefend.contains( objective.getTargetedFlag())){
                         objectivesToDeletion.add(objective);
-                        //this.onPress( (int)objective.getX(), (int)objective.getY());
                     }
                 }
             }

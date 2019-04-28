@@ -309,6 +309,7 @@ public class Quadtree {
         if(distance < 400){
             distance = (float)Math.sqrt(distance);
             axis.scl((20 - distance)/20/distance);
+            //axis.scl(2*(20 - distance)/distance);
             ship1.addVel(axis);
             ship2.addVel(axis.scl(-1));
         }
@@ -322,6 +323,7 @@ public class Quadtree {
             if (ship.getObjective() != null && ship.getObjective().getTargetedFlag() == flag) {
                 //axis.rotate(5);// its dt dependent, to rework
                 axis.rotate( 50f * ship.gp.getTime() / 2f / (float)Math.PI / 37f * 360f);
+                //axis.rotate( 360f * ship.team.getSpeed() * ship.team.getSpeed() * ship.gp.getTime() / 2f / (float)Math.PI / 37f);
                 axis.nor();
                 axis.scl(37);
                 axis.add(flag.getPos());
@@ -329,7 +331,8 @@ public class Quadtree {
                 axis.scl(2);
                 ship.addVel(axis);
             } else {
-                final int k = 10;
+                //final int k = 10;
+                final int k = 1;
                 final int d = 45;
                 axis.nor();
                 axis.scl((d - distance) / k);

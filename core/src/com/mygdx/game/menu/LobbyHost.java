@@ -192,6 +192,7 @@ public class LobbyHost extends AbstractScreen {
     }
 
     public void render(float delta) {
+        clearScreen();
         super.render(delta);
     }
 
@@ -244,7 +245,7 @@ public class LobbyHost extends AbstractScreen {
                     textToSend = textToSend + client.nick + "/";
                 }
 
-                try { Thread.sleep(20);} //wait for the new client
+                try { Thread.sleep(30);} //wait for the new client
                 catch (InterruptedException e) {e.printStackTrace();}
 
                 refreshPlayers();

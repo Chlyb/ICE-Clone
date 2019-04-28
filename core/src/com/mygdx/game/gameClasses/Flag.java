@@ -34,7 +34,7 @@ public class Flag extends Entity implements Serializable {
                 v.rotate(angle);
                 Ship ship = new Ship(gp, team, v.add(pos));
                 ship.angle = angle - 180;
-                cooldown = 3;
+                cooldown = 1.5f;
             }
         }
     }

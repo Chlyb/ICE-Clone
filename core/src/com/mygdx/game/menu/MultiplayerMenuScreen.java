@@ -226,7 +226,9 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         else networkBtn.setText("Connected as " + IP);
     }
 
-    public void render(float delta){
+    @Override
+    public void render(float delta) {
+        clearScreen();
         super.render(delta);
     }
 

@@ -62,6 +62,10 @@ public class GamePacket implements Serializable{
             flag.update();
         }
 
+        for(Team team : teams){
+            team.update();
+        }
+
         Thread t1 = new Thread(new CollisionUpdate(this));
         Thread t2 = new Thread(new RangeUpdate(this));
 
@@ -105,7 +109,7 @@ public class GamePacket implements Serializable{
                 shootOffset %= 4;
 
                 if (ship.getTarget() != null && shootOffset == 0) {
-                    sr.line(ship.getPos().x + ship.getVel().x * 50 * delta, ship.getPos().y + ship.getVel().y * 50 * delta, ship.getTarget().getPos().x + ship.getTarget().getVel().x * 50 * delta, ship.getTarget().getPos().y + ship.getTarget().getVel().y * delta, colors[ship.getTeam().color], colors[ship.getTeam().color]);
+                    sr.line(ship.getPos().x + ship.getVel().x * ship.team.getSpeed() * delta, ship.getPos().y + ship.getVel().y * ship.team.getSpeed() * delta, ship.getTarget().getPos().x + ship.getTarget().getVel().x * ship.team.getSpeed() * delta, ship.getTarget().getPos().y + ship.getTarget().getVel().y * ship.team.getSpeed() * delta, colors[ship.getTeam().color], colors[ship.getTeam().color]);
                 }
             }
 
@@ -146,8 +150,8 @@ public class GamePacket implements Serializable{
             }
 
             for (Ship ship : getShips()) {
-                float x = ship.getPos().x + ship.getVel().x * 50 * delta;
-                float y = ship.getPos().y + ship.getVel().y * 50 * delta;
+                float x = ship.getPos().x + ship.getVel().x * ship.team.getSpeed() * delta;
+                float y = ship.getPos().y + ship.getVel().y * ship.team.getSpeed() * delta;
                 float sin = (float) Math.sin(Math.toRadians(-ship.getAngle()));
                 float cos = (float) Math.cos(Math.toRadians(-ship.getAngle()));
                 Color color = colors[ship.getTeam().color];

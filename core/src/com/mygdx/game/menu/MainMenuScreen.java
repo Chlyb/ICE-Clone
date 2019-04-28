@@ -72,7 +72,9 @@ public class MainMenuScreen extends AbstractScreen {
         Gdx.input.setInputProcessor(stage);
     }
 
-    public  void render(float delta){
+    @Override
+    public void render(float delta) {
+        clearScreen();
         super.render(delta);
     }
 }

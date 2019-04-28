@@ -106,8 +106,9 @@ public class SinglePlayerMenu extends AbstractScreen {
         stage.addActor(errorLabel);
 
     }
-
-    public  void render(float delta){
+    @Override
+    public void render(float delta) {
+        clearScreen();
         super.render(delta);
     }
 }

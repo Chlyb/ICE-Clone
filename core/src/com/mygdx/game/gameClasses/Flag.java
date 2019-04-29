@@ -18,7 +18,7 @@ public class Flag extends Entity implements Serializable {
     public Flag(GamePacket gp, Team team, Vector2 pos) {
         super(gp, team, pos);
         cooldown = 0;
-        health = 1000;
+        health = team.getFlagHealth();
         linkedFlags = new ArrayList<Flag>();
         shotBy = null;
         team.addFlag(this);
@@ -40,7 +40,7 @@ public class Flag extends Entity implements Serializable {
     }
 
     public void move(float dt){
-        if(health < 1000){
+        if(health < team.getFlagHealth()){
             if(health <= 0){
                 changeTeam(shotBy.getTeam());
             }

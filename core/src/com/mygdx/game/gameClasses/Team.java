@@ -1,5 +1,6 @@
 package com.mygdx.game.gameClasses;
 
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 
 import java.io.Serializable;
@@ -12,6 +13,7 @@ public class Team implements Serializable {
 
     private int damage;
     private int health;
+    private int flagHealth;
     private int speed;
 
     private int score;
@@ -44,8 +46,9 @@ public class Team implements Serializable {
         this.color = color;
 
         damage = 5;
-        speed = 50;
         health = 5;
+        flagHealth = 1000;
+        speed = 50;
 
         score = 0;
         scoreToNextLevel = 50;
@@ -72,6 +75,7 @@ public class Team implements Serializable {
 
     public void update(){
         if(score > scoreToNextLevel){
+            System.out.println(scoreToNextLevel);
             score = score % scoreToNextLevel;
             ++avaibleUpgrades;
             ++level;
@@ -95,11 +99,13 @@ public class Team implements Serializable {
             }
             else if(upgrade == 1 && healthLevel < 10){
                 ++health;
+                if(flagHealth == 9) flagHealth = 2000;
+                else flagHealth += 111;
                 ++healthLevel;
                 --avaibleUpgrades;
                 ++level;
             }
-            else if(speedLevel < 10){
+            else if(upgrade == 2 && speedLevel < 10){
                 speed += 5;
                 ++speedLevel;
                 --avaibleUpgrades;
@@ -219,6 +225,7 @@ public class Team implements Serializable {
 
     public int getAttackLevel(){return attackLevel;}
     public int getHealthLevel(){return healthLevel;}
+    public int getFlagHealth(){return flagHealth;}
     public int getSpeedLevel(){return speedLevel;}
     public int getProgressBarWidth(){return progressBarWidth;}
     public int getAvaibleUpgrades(){return avaibleUpgrades;}

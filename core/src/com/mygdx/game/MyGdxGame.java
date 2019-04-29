@@ -19,6 +19,7 @@ public class MyGdxGame extends Game {
 	public ShapeRenderer sr;
 	public SpriteBatch sb;
 	public BitmapFont bf;
+	public BitmapFont menuBf;
 
 	private  boolean paused;
 
@@ -35,6 +36,10 @@ public class MyGdxGame extends Game {
 		parameter.size = 18;
 		parameter.flip = true;
 		bf = generator.generateFont(parameter);
+
+		parameter.size = 80;
+		parameter.flip = false;
+		menuBf = generator.generateFont(parameter);
 		generator.dispose();
 
 		this.setScreen(new MainMenuScreen(this));

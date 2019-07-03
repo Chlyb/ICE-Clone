@@ -9,11 +9,12 @@ import java.util.Comparator;
 import java.util.List;
 
 public class Flag extends Entity implements Serializable {
-    private List<Flag> linkedFlags;
-    public Ship shotBy; //to rework
+    transient private List<Flag> linkedFlags;
+    transient public Ship shotBy; //to rework
+    private float health;
 
     public float angle;
-    private float cooldown;
+    transient private float cooldown;
 
     public Flag(GamePacket gp, Team team, Vector2 pos) {
         super(gp, team, pos);
@@ -34,7 +35,8 @@ public class Flag extends Entity implements Serializable {
                 v.rotate(angle);
                 Ship ship = new Ship(gp, team, v.add(pos));
                 ship.angle = angle - 180;
-                cooldown = 1.5f;
+                //cooldown = 1.5f;
+                cooldown = 0;
             }
         }
     }
@@ -164,4 +166,14 @@ public class Flag extends Entity implements Serializable {
     public float getCooldown(){return cooldown;}
     public void setHealth(int health){this.health = health;}
     public Vector2 getVel(){return Vector2.Zero;}
+
+    @Override
+    float getHealth() {
+        return health;
+    }
+
+    @Override
+    void dealDamage(float damage) {
+        health -= damage;
+    }
 }

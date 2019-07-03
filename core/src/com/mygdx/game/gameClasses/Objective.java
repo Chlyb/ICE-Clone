@@ -6,9 +6,9 @@ import java.io.Serializable;
 
 public class Objective implements Serializable {
     public static final int RADIUS = 100;
-    private final Team team;
+    transient private final Team team;
     private final Vector2 pos;
-    private Flag targetedFlag;
+    transient private Flag targetedFlag;
 
     public Objective(Team team, Vector2 pos) {
         this.team = team;

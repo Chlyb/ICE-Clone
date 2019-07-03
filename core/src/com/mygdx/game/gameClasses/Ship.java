@@ -8,7 +8,8 @@ public class Ship extends Entity implements Serializable {
     private Vector2 vel;
     public float angle;
     private Entity target;
-    private Objective objective;
+    transient private Objective objective;
+    transient private float health;
 
     public Ship(GamePacket gp, Team team, Vector2 pos) {
         super(gp, team, pos);
@@ -24,17 +25,17 @@ public class Ship extends Entity implements Serializable {
     }
 
     public void shoot(float dt){
-        target.health -= team.getDamage() * dt;
+        target.dealDamage(team.getDamage() * dt);
         if(target instanceof Flag){
             ((Flag)target).shotBy = this;
-            if(target.health < 0) team.addScore(5);
+            if(target.getHealth() < 0) team.addScore(5);
         }
-        else if(target.health < 0) team.addScore(1);
+        else if(target.getHealth() < 0) team.addScore(1);
     }
 
     public void updateMoving(){
         if(target != null){
-            if( target.health <= 0 || pos.cpy().sub(target.getPos()).len2() > 50*50) target = null;
+            if( target.getHealth() <= 0 || pos.cpy().sub(target.getPos()).len2() > 50*50) target = null;
         }
 
         vel.scl(0.9f);
@@ -85,6 +86,17 @@ public class Ship extends Entity implements Serializable {
     }
     public void addVel(Vector2 vel){ this.vel.add(vel);}
     public Vector2 getVel(){return vel;}
+
+    @Override
+    float getHealth() {
+        return health;
+    }
+
+    @Override
+    void dealDamage(float damage) {
+        health -= damage;
+    }
+
     public void setObjective(Objective objective) {
         this.objective = objective;
     }

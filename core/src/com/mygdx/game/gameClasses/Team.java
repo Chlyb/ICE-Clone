@@ -1,6 +1,5 @@
 package com.mygdx.game.gameClasses;
 
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.math.Vector2;
 
 import java.io.Serializable;
@@ -8,38 +7,38 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Team implements Serializable {
-    public final GamePacket gp;
+    transient public final GamePacket gp;
     public final int color;
 
-    private int damage;
-    private int health;
-    private int flagHealth;
-    private int speed;
+    transient private int damage;
+    transient private int health;
+    transient private int flagHealth;
+    transient private int speed;
 
-    private int score;
-    private int scoreToNextLevel;
-    private int avaibleUpgrades;
+    transient private int score;
+    transient private int scoreToNextLevel;
+    private int availableUpgrades;
     private int progressBarWidth;
-    private int level;
+    transient private int level;
     private int attackLevel;
     private int healthLevel;
     private int speedLevel;
 
     private List<Objective> objectives;
-    private List<Ship> ships;
-    private List<Flag> flags;
-    private List<Flag> linkedFlags;
-    public int objectiveCount;
-    private int shipCount;
+    transient private List<Ship> ships;
+    transient private List<Flag> flags;
+    transient private List<Flag> linkedFlags;
+    transient public int objectiveCount;
+    transient private int shipCount;
+    transient private int ix;
     private int flagCount;
-    private int ix;
 
-    private int iteAI;
-    private int timeSinceAttack;
+    transient private int iteAI;
+    transient private int timeSinceAttack;
 
     //AI
-    private List<Objective> offensiveObjectives;
-    private List<Objective> defensiveObjectives;
+    transient private List<Objective> offensiveObjectives;
+    transient private List<Objective> defensiveObjectives;
 
     public Team(GamePacket gp, int color) {
         this.gp = gp;
@@ -53,7 +52,7 @@ public class Team implements Serializable {
         score = 0;
         scoreToNextLevel = 50;
         progressBarWidth = 0;
-        avaibleUpgrades = 0;
+        availableUpgrades = 0;
         level = 3;
         attackLevel = 1;
         healthLevel = 1;
@@ -77,7 +76,7 @@ public class Team implements Serializable {
         if(score > scoreToNextLevel){
             System.out.println(scoreToNextLevel);
             score = score % scoreToNextLevel;
-            ++avaibleUpgrades;
+            ++availableUpgrades;
             ++level;
             scoreToNextLevel += 100;
 
@@ -90,11 +89,11 @@ public class Team implements Serializable {
     }
 
     public void upgrade(int upgrade){
-        if(avaibleUpgrades > 0){
+        if(availableUpgrades > 0){
             if(upgrade == 0 && attackLevel < 10){
                 ++damage;
                 ++attackLevel;
-                --avaibleUpgrades;
+                --availableUpgrades;
                 ++level;
             }
             else if(upgrade == 1 && healthLevel < 10){
@@ -102,13 +101,13 @@ public class Team implements Serializable {
                 if(flagHealth == 9) flagHealth = 2000;
                 else flagHealth += 111;
                 ++healthLevel;
-                --avaibleUpgrades;
+                --availableUpgrades;
                 ++level;
             }
             else if(upgrade == 2 && speedLevel < 10){
                 speed += 5;
                 ++speedLevel;
-                --avaibleUpgrades;
+                --availableUpgrades;
                 ++level;
             }
         }
@@ -228,7 +227,7 @@ public class Team implements Serializable {
     public int getFlagHealth(){return flagHealth;}
     public int getSpeedLevel(){return speedLevel;}
     public int getProgressBarWidth(){return progressBarWidth;}
-    public int getAvaibleUpgrades(){return avaibleUpgrades;}
+    public int getAvailableUpgrades(){return availableUpgrades;}
     public void setHealth(int h){health = h;}
     public void addScore(float score){ this.score += score;}
 

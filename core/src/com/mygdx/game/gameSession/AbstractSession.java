@@ -2,7 +2,6 @@ package com.mygdx.game.gameSession;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.InputMultiplexer;
-import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
@@ -18,8 +17,6 @@ import com.mygdx.game.gameClasses.Team;
 import com.mygdx.game.menu.AbstractScreen;
 
 import java.util.concurrent.atomic.AtomicLong;
-
-import javax.swing.text.TabExpander;
 
 public abstract class AbstractSession extends AbstractScreen implements GestureDetector.GestureListener {
     protected float zoom;
@@ -110,9 +107,9 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
             healthLabel.setText("HEALTH: " + renderedGp.getTeams().get(playerTeamIndex).getHealthLevel());
             speedLabel.setText("SPEED: " + renderedGp.getTeams().get(playerTeamIndex).getSpeedLevel());
 
-            if(renderedGp.getTeams().get(playerTeamIndex).getAvaibleUpgrades() > 0){
-                if(renderedGp.getTeams().get(playerTeamIndex).getAvaibleUpgrades() == 1) upgradeLabel.setText("1 UPGRADE!");
-                else upgradeLabel.setText( renderedGp.getTeams().get(playerTeamIndex).getAvaibleUpgrades() + " UPGRADES!");
+            if(renderedGp.getTeams().get(playerTeamIndex).getAvailableUpgrades() > 0){
+                if(renderedGp.getTeams().get(playerTeamIndex).getAvailableUpgrades() == 1) upgradeLabel.setText("1 UPGRADE!");
+                else upgradeLabel.setText( renderedGp.getTeams().get(playerTeamIndex).getAvailableUpgrades() + " UPGRADES!");
                 upgradeLabel.setVisible(true);
             }
             else upgradeLabel.setVisible(false);

@@ -4,7 +4,7 @@ package com.mygdx.game.gameClasses;
 import java.io.Serializable;
 
 public class Link implements Serializable {
-    public final GamePacket gp;
+    transient public final GamePacket gp;
     public final Flag flag1;
     public final Flag flag2;
 

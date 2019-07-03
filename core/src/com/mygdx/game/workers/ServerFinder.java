@@ -25,7 +25,7 @@ public class ServerFinder implements Runnable {
 
             String message = new String(receivePacket.getData()).trim();
 
-            if (message.charAt(0) == 'r') {
+            if (message.length() > 0 &&message.charAt(0) == 'r') {
                 serverNames.add( receivePacket.getAddress().toString().substring(1) + "/" + message.substring(1));
             }
         }

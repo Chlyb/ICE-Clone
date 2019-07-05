@@ -42,7 +42,11 @@ public class MyGdxGame extends Game {
 		menuBf = generator.generateFont(parameter);
 		generator.dispose();
 
-		this.setScreen(new MainMenuScreen(this));
+		Gdx.input.setCatchBackKey(true);
+
+		MainMenuScreen mms = new MainMenuScreen(this);
+		this.setScreen(mms);
+		Gdx.input.setInputProcessor(mms.getInputMultiplexer());
 	}
 
 	@Override

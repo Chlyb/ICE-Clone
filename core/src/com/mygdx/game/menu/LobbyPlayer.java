@@ -42,7 +42,7 @@ public class LobbyPlayer extends AbstractScreen {
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> playerList;
 
     public LobbyPlayer(final MyGdxGame game, final MultiplayerMenuScreen multiplayerMenu, final String serverIP, final String groupAddress) {
-        super(game);
+        super(game, multiplayerMenu);
         this.multiplayerMenu = multiplayerMenu;
         Gdx.input.setInputProcessor(stage);
         runThread = true;
@@ -136,8 +136,8 @@ public class LobbyPlayer extends AbstractScreen {
             @Override
             public void clicked(InputEvent event, float x, float y){
                 mySocket.dispose();
-                Gdx.input.setInputProcessor(multiplayerMenu.stage);
-                game.setScreen( multiplayerMenu);
+                game.setScreen(multiplayerMenu);
+                Gdx.input.setInputProcessor(multiplayerMenu.getInputMultiplexer());
             }
         });
         stage.addActor(exitBtn);
@@ -146,8 +146,6 @@ public class LobbyPlayer extends AbstractScreen {
         errorLabel.setPosition(600,170);
         errorLabel.setAlignment(Align.center);
         stage.addActor(errorLabel);
-
-        Gdx.input.setInputProcessor(stage);
     }
 
     @Override
@@ -156,7 +154,10 @@ public class LobbyPlayer extends AbstractScreen {
         super.render(delta);
 
         if(playerIndex != -1){
-            game.setScreen(new MultiplayerClient(game, getThis(), playerIndex));
+            MultiplayerClient mc = new MultiplayerClient(game, getThis(), playerIndex);
+            game.setScreen(mc);
+            Gdx.input.setInputProcessor(mc.getInputMultiplexer());
+            playerIndex = -1;
         }
     }
 

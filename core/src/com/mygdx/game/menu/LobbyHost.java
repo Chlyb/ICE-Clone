@@ -47,7 +47,7 @@ public class LobbyHost extends AbstractScreen {
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> playerList;
 
     public LobbyHost(final MyGdxGame game, final MultiplayerMenuScreen multiplayerMenu) {
-        super(game);
+        super(game, multiplayerMenu);
         runThread = true;
         clients = new ArrayList<Client>();
         this.multiplayerMenu = multiplayerMenu;
@@ -163,7 +163,9 @@ public class LobbyHost extends AbstractScreen {
             public void clicked(InputEvent event, float x, float y){
                 runThread = false;
                 sendStartInfo();
-                game.setScreen(new MultiplayerHost(game, getThis(), flagcountBox.getSelected(), clients.size()));
+                MultiplayerHost mh = new MultiplayerHost(game, getThis(), flagcountBox.getSelected(), clients.size());
+                game.setScreen(mh);
+                Gdx.input.setInputProcessor(mh.getInputMultiplexer());
             }
         });
         stage.addActor(playBtn);
@@ -175,9 +177,9 @@ public class LobbyHost extends AbstractScreen {
         exitBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                serverSocket.dispose();
-                Gdx.input.setInputProcessor(multiplayerMenu.stage);
-                game.setScreen( multiplayerMenu);
+                //serverSocket.dispose();
+                game.setScreen(multiplayerMenu);
+                Gdx.input.setInputProcessor(multiplayerMenu.getInputMultiplexer());
             }
         });
         stage.addActor(exitBtn);
@@ -188,7 +190,6 @@ public class LobbyHost extends AbstractScreen {
         stage.addActor(errorLabel);
 
         refreshPlayers();
-        Gdx.input.setInputProcessor(stage);
     }
 
     public void render(float delta) {

@@ -39,7 +39,7 @@ public class MultiplayerMenuScreen extends AbstractScreen {
     private TextField nickField;
 
     public MultiplayerMenuScreen(MyGdxGame game, MainMenuScreen mainMenu) {
-        super(game);
+        super(game, mainMenu);
         this.mainMenu = mainMenu;
         IP = "";
         init();
@@ -93,9 +93,9 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         joinBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                //game.setScreen(new LobbyPlayer(game, getThis(), serverBox.getSelected()));
-                //game.setScreen(new LobbyPlayer(game, getThis(), serverList.getSelected()));
-                game.setScreen(new LobbyPlayer(game, getThis(), serverList.getSelected().split("/")[0], serverList.getSelected().split("/")[1]));
+                LobbyPlayer lp = new LobbyPlayer(game, getThis(), serverList.getSelected().split("/")[0], serverList.getSelected().split("/")[1]);
+                game.setScreen(lp);
+                Gdx.input.setInputProcessor(lp.getInputMultiplexer());
             }
         });
         stage.addActor(joinBtn);
@@ -106,7 +106,9 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         hostBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                game.setScreen(new LobbyHost(game, getThis()));
+                LobbyHost lh = new LobbyHost(game, getThis());
+                game.setScreen(lh);
+                Gdx.input.setInputProcessor(lh.getInputMultiplexer());
             }
         });
         stage.addActor(hostBtn);

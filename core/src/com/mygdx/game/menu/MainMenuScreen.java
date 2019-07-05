@@ -1,26 +1,22 @@
 package com.mygdx.game.menu;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
-import com.badlogic.gdx.scenes.scene2d.ui.TextField;
-import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.mygdx.game.MyGdxGame;
 
 public class MainMenuScreen extends AbstractScreen {
     private String arg;
-    private SinglePlayerMenu lps;
+    private SinglePlayerMenu spm;
     private MultiplayerMenuScreen mms;
 
     public MainMenuScreen(MyGdxGame game){
-        super(game);
-        lps = new SinglePlayerMenu( game, this);
+        super(game, null);
+        spm = new SinglePlayerMenu( game, this);
         mms = new MultiplayerMenuScreen( game, this);
         init();
     }
@@ -38,8 +34,8 @@ public class MainMenuScreen extends AbstractScreen {
         singleplayerBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                Gdx.input.setInputProcessor(lps.stage);
-                game.setScreen(lps);
+                game.setScreen(spm);
+                Gdx.input.setInputProcessor(spm.getInputMultiplexer());
             }
         });
         stage.addActor(singleplayerBtn);
@@ -50,10 +46,11 @@ public class MainMenuScreen extends AbstractScreen {
         multiplayerBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                Gdx.input.setInputProcessor(mms.stage);
+                Gdx.input.setInputProcessor(mms.getInputMultiplexer());
                 mms.refreshIP();
                 mms.refreshServers();
                 game.setScreen(mms);
+
             }
         });
         stage.addActor(multiplayerBtn);
@@ -68,8 +65,6 @@ public class MainMenuScreen extends AbstractScreen {
             }
         });
         stage.addActor(exitBtn);
-
-        Gdx.input.setInputProcessor(stage);
     }
 
     @Override

@@ -1,9 +1,14 @@
 package com.mygdx.game.gameSession;
 
+import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.utils.Timer;
 import com.mygdx.game.MyGdxGame;
 import com.mygdx.game.gameClasses.Flag;
 import com.mygdx.game.gameClasses.GamePacket;
 import com.mygdx.game.gameClasses.Team;
+import com.mygdx.game.menu.AbstractScreen;
+import com.mygdx.game.menu.ResumeScreen;
+import com.mygdx.game.menu.SinglePlayerMenu;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,9 +18,13 @@ public final class SinglePlayerSession extends AbstractSession {
     private GamePacket gp;
     private Team playerTeam;
     private AtomicLong physicsTime = new AtomicLong(0);
+    private SinglePlayerMenu spm;
 
-    public SinglePlayerSession(MyGdxGame game, int flagCount, int enemyCount, String playerColor) {
-        super(game, 1);
+    public SinglePlayerSession(MyGdxGame game, SinglePlayerMenu singlePlayerMenu, int flagCount, int enemyCount, String playerColor) {
+        super(game, null, 1);
+        previousScreen = new ResumeScreen(game, singlePlayerMenu, this);
+        this.spm = singlePlayerMenu;
+
         this.gp = new GamePacket();
 
         List<String> existingTeams = new ArrayList<String>();
@@ -55,15 +64,49 @@ public final class SinglePlayerSession extends AbstractSession {
         new Thread(new Runnable() {
             @Override
             public void run() { //Update thread
-                while (true) {
-                    gp.update(physicsTime);
-                    for (Team team : gp.getTeams()) {
-                        if (team != gp.getNeutralTeam() && team != playerTeam) team.AItrigger();
+                while (!finished) {
+                    if (!paused.get()){
+                        gp.update(physicsTime);
+                        for (Team team : gp.getTeams()) {
+                            if (team != gp.getNeutralTeam() && team != playerTeam) team.AItrigger();
+                        }
+                        new Thread(copyToRender).start();
                     }
-                    new Thread(copyToRender).start();
                 }
             }
         }).start();
+    }
+
+    @Override
+    void end(boolean definitive) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                finishing = true;
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                finished = true;
+                game.setScreen(spm);
+                Gdx.input.setInputProcessor(spm.getInputMultiplexer());
+            }
+        }).start();
+    }
+
+    @Override
+    public void unpause() {
+        super.unpause();
+        physicsTime.set(System.currentTimeMillis());
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        paused.set(true);
+        game.setScreen(previousScreen);
+        Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
+        return false;
     }
 
     @Override

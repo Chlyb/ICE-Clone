@@ -1,6 +1,7 @@
 package com.mygdx.game.gameSession;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
@@ -16,6 +17,7 @@ import com.mygdx.game.gameClasses.GamePacket;
 import com.mygdx.game.gameClasses.Team;
 import com.mygdx.game.menu.AbstractScreen;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class AbstractSession extends AbstractScreen implements GestureDetector.GestureListener {
@@ -26,6 +28,7 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
     private Label healthLabel;
     private Label speedLabel;
     private Label upgradeLabel;
+    private Label endLabel;
 
     protected final int playerTeamIndex;
     private int color;
@@ -35,8 +38,12 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
     protected AtomicLong renderTime;
     private short shootOffset;
 
-    public AbstractSession(MyGdxGame game, int playerTeamIndex) {
-        super(game);
+    protected AtomicBoolean paused;
+    protected boolean finishing = false;
+    protected boolean finished = false;
+
+    public AbstractSession(MyGdxGame game, AbstractScreen previousScreen, int playerTeamIndex) {
+        super(game, previousScreen);
 
         gameCam.setToOrtho(true);
         gameCam.position.x = game.WIDTH/2;
@@ -54,10 +61,8 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
         init();
 
         GestureDetector gestureDetector = new GestureDetector(this);
-        InputMultiplexer inputMultiplexer = new InputMultiplexer();
         inputMultiplexer.addProcessor(gestureDetector);
-        inputMultiplexer.addProcessor(stage);
-        Gdx.input.setInputProcessor(inputMultiplexer);
+        paused = new AtomicBoolean(false);
     }
 
     private void init(){
@@ -96,6 +101,12 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
         upgradeLabel.setPosition(950,440);
         upgradeLabel.setAlignment(Align.right);
         stage.addActor(upgradeLabel);
+
+        endLabel = new Label("", skin, "big");
+        endLabel.setSize(0,0);
+        endLabel.setPosition(480,280);
+        endLabel.setAlignment(Align.center);
+        stage.addActor(endLabel);
     }
 
     protected void updateUI(){
@@ -113,8 +124,24 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
                 upgradeLabel.setVisible(true);
             }
             else upgradeLabel.setVisible(false);
+
+            if(!finishing){
+                for (Team team : renderedGp.getTeams()){
+                    if(team.getFlagCount() == renderedGp.getFlags().size()) end(true);
+                }
+                if(renderedGp.getTeams().get(playerTeamIndex).getFlagCount() == 0){
+                    endLabel.setText("GAME OVER");
+                    end(false);
+                }
+                else if(renderedGp.getTeams().get(playerTeamIndex).getFlagCount() == renderedGp.getFlags().size()){
+                    endLabel.setText("VICTORY!");
+                    end(true);
+                }
+            }
         }
     }
+
+    abstract void end(boolean definitive);
 
     @Override
     public void render(float delta){
@@ -151,6 +178,10 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
     protected abstract void playerClick(float x, float y);
     protected abstract void upgrade(int upgrade);
 
+    public void unpause(){
+        paused.set(false);
+    }
+
     @Override
     public boolean tap(float x, float y, int count, int button) {
         if (y > 0.13 * game.HEIGHT) playerClick(x, y);
@@ -177,9 +208,7 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
     }
 
     @Override
-    public boolean touchDown(float x, float y, int pointer, int button) {
-        return false;
-    }
+    public boolean touchDown(float x, float y, int pointer, int button) { return false; }
 
     @Override
     public boolean longPress(float x, float y) {

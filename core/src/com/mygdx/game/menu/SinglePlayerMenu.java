@@ -18,7 +18,7 @@ public class SinglePlayerMenu extends AbstractScreen {
     private MainMenuScreen mainMenu;
 
     public SinglePlayerMenu(MyGdxGame game, MainMenuScreen mainMenu){
-        super(game);
+        super(game, mainMenu);
         this.mainMenu = mainMenu;
         init();
     }
@@ -79,8 +79,9 @@ public class SinglePlayerMenu extends AbstractScreen {
                     errorLabel.setText("Too many enemies");
                 }
                 else{
-                    game.setScreen(new SinglePlayerSession(game, flagcountBox.getSelected(), enemiescountBox.getSelected(), playercolorBox.getSelected()));
-
+                    SinglePlayerSession sps = new SinglePlayerSession(game, getThis(), flagcountBox.getSelected(), enemiescountBox.getSelected(), playercolorBox.getSelected());
+                    game.setScreen(sps);
+                    Gdx.input.setInputProcessor(sps.getInputMultiplexer());
                 }
                 System.out.println("to the game");
             }
@@ -94,8 +95,8 @@ public class SinglePlayerMenu extends AbstractScreen {
         exitBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                Gdx.input.setInputProcessor(mainMenu.stage);
                 game.setScreen( mainMenu);
+                Gdx.input.setInputProcessor(mainMenu.getInputMultiplexer());
             }
         });
         stage.addActor(exitBtn);
@@ -104,8 +105,12 @@ public class SinglePlayerMenu extends AbstractScreen {
         errorLabel.setPosition(600,170);
         errorLabel.setAlignment(Align.center);
         stage.addActor(errorLabel);
-
     }
+
+    SinglePlayerMenu getThis(){
+        return this;
+    }
+
     @Override
     public void render(float delta) {
         clearScreen();

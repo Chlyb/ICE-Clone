@@ -1,11 +1,14 @@
 package com.mygdx.game.gameSession;
 
+import com.badlogic.gdx.Gdx;
 import com.mygdx.game.CompressionUtils;
 import com.mygdx.game.MyGdxGame;
 import com.mygdx.game.gameClasses.Flag;
 import com.mygdx.game.gameClasses.Team;
 import com.mygdx.game.gameClasses.GamePacket;
+import com.mygdx.game.menu.AbstractScreen;
 import com.mygdx.game.menu.LobbyHost;
+import com.mygdx.game.menu.ResumeScreen;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -32,7 +35,8 @@ public class MultiplayerHost extends AbstractSession {
     public static final int payload = 1471;
 
     public MultiplayerHost(MyGdxGame game, LobbyHost lobby, int flagCount, int enemyCount) {
-        super(game, 1);
+        super(game, null, 1);
+        previousScreen = new ResumeScreen(game, lobby, this);
         this.lobby = lobby;
         this.gp = new GamePacket();
 
@@ -62,7 +66,7 @@ public class MultiplayerHost extends AbstractSession {
                         e.getMessage();
                     }
 
-                    while (true) {
+                    while (!finished) {
                         DatagramPacket packet = new DatagramPacket(buf, buf.length);
                         socket.receive(packet);
                         processPacket(packet);
@@ -118,13 +122,49 @@ public class MultiplayerHost extends AbstractSession {
         new Thread(new Runnable() {
             @Override
             public void run() { //Update thread
-                while (true) {
-                    gp.update(physicsTime);
-                    new Thread(copyToSendAndRender).start();
-                    ++tick;
+                while (!finished) {
+                    if (!paused.get()) {
+                        gp.update(physicsTime);
+                        new Thread(copyToSendAndRender).start();
+                        ++tick;
+                    }
                 }
             }
         }).start();
+    }
+
+    @Override
+    void end(final boolean definitive) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if(definitive){
+                    finishing = true;
+                    try {
+                        Thread.sleep(4000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    finished = true;
+                    game.setScreen(lobby);
+                    Gdx.input.setInputProcessor(lobby.getInputMultiplexer());
+                }
+            }
+        }).start();
+    }
+
+    @Override
+    public void unpause() {
+        super.unpause();
+        physicsTime.set(System.currentTimeMillis());
+    }
+
+    @Override
+    public boolean keyDown(int keycode) {
+        paused.set(true);
+        game.setScreen(previousScreen);
+        Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
+        return false;
     }
 
     @Override

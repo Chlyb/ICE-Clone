@@ -1,8 +1,11 @@
 package com.mygdx.game.gameSession;
 
+import com.badlogic.gdx.Gdx;
 import com.mygdx.game.MyGdxGame;
 import com.mygdx.game.gameClasses.GamePacket;
+import com.mygdx.game.menu.AbstractScreen;
 import com.mygdx.game.menu.LobbyPlayer;
+import com.mygdx.game.menu.ResumeScreen;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -77,7 +80,7 @@ public class MultiplayerClient extends AbstractSession {
                 MulticastSocket socket = new MulticastSocket(8890 + i);
                 InetAddress group = InetAddress.getByName(lobby.groupAddress);
                 socket.joinGroup(group);
-                while (true) {
+                while (!finished) {
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     socket.receive(packet);
                     Fragment sub = new Fragment(packet.getData(), packet.getLength());
@@ -92,7 +95,8 @@ public class MultiplayerClient extends AbstractSession {
     }
 
     public MultiplayerClient(MyGdxGame game, final LobbyPlayer lobby, int playerTeamIndex) {
-        super(game, playerTeamIndex);
+        super(game, null, playerTeamIndex);
+        previousScreen = new ResumeScreen(game, lobby, this);
         this.lobby = lobby;
 
         this.receivedFragments = new LinkedList[fragmentCount];
@@ -103,6 +107,26 @@ public class MultiplayerClient extends AbstractSession {
             this.preservedFragments[i] = new LinkedList<>();
             new Thread(new listener(i)).start();
         }
+    }
+
+    @Override
+    void end(final boolean definitive) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if(definitive) {
+                    finishing = true;
+                    try {
+                        Thread.sleep(3000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    finished = true;
+                    game.setScreen(lobby);
+                    Gdx.input.setInputProcessor(lobby.getInputMultiplexer());
+                }
+            }
+        }).start();
     }
 
     @Override

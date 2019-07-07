@@ -1,7 +1,6 @@
 package com.mygdx.game.menu;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.net.ServerSocket;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
 import com.badlogic.gdx.scenes.scene2d.ui.Button;
@@ -20,19 +19,17 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 
-import static java.lang.Thread.sleep;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.serverPort;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.clientPort;
 
 public class LobbyPlayer extends AbstractScreen {
 
-    private boolean runThread;
-
     public final MultiplayerMenuScreen multiplayerMenu;
-    private ServerSocket mySocket;
 
-    public static final int serverPort = 8888;
-    public static final int myPort = 8889;
     public final String serverIP;
     public final String groupAddress;
+
+    private MulticastSocket receivingSocket;
 
     private int playerIndex = -1;
 
@@ -45,32 +42,11 @@ public class LobbyPlayer extends AbstractScreen {
         super(game, multiplayerMenu);
         this.multiplayerMenu = multiplayerMenu;
         Gdx.input.setInputProcessor(stage);
-        runThread = true;
         this.serverIP = serverIP;
         this.groupAddress = groupAddress;
-        
-        sendMessage("j" + multiplayerMenu.getNick()); //join
 
-        new Thread(new Runnable(){
-            MulticastSocket socket = null;
-            byte[] buf = new byte[256];
-            @Override
-            public void run() {  //UDP
-                try {
-                    socket = new MulticastSocket(8890);
-                    InetAddress group = InetAddress.getByName( groupAddress);
-                    socket.joinGroup(group);
-                    //System.out.println(groupAddress);
-                    while (runThread) {
-                        DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                        socket.receive( packet);
-                        processPacket( packet);
-                    }
-                    //socket.leaveGroup(group);
-                    //socket.close();
-                }catch (IOException e){}
-            }
-        }).start(); // And, start the thread running*/
+        createListener();
+        sendMessage("j" + multiplayerMenu.getNick()); //join
 
         Label chatLabel = new Label("Chat", skin, "default");
         chatLabel.setSize(120,40);
@@ -135,9 +111,7 @@ public class LobbyPlayer extends AbstractScreen {
         exitBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                mySocket.dispose();
-                game.setScreen(multiplayerMenu);
-                Gdx.input.setInputProcessor(multiplayerMenu.getInputMultiplexer());
+                goBack();
             }
         });
         stage.addActor(exitBtn);
@@ -161,6 +135,27 @@ public class LobbyPlayer extends AbstractScreen {
         }
     }
 
+    public void createListener(){
+        new Thread(new Runnable(){
+            byte[] buf = new byte[256];
+            @Override
+            public void run() {  //UDP
+                try {
+                    receivingSocket = new MulticastSocket(clientPort);
+                    InetAddress group = InetAddress.getByName( groupAddress);
+                    receivingSocket.joinGroup(group);
+                    while (true) {
+                        DatagramPacket packet = new DatagramPacket(buf, buf.length);
+                        receivingSocket.receive( packet);
+                        processPacket( packet);
+                    }
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+            }
+        }).start();
+    }
+
     public void processPacket(DatagramPacket packet){
         String message = new String(packet.getData(), 0, packet.getLength());
 
@@ -179,9 +174,8 @@ public class LobbyPlayer extends AbstractScreen {
                 updateChat(message.substring(1));
                 break;
             case 's': //start
-                System.out.println("taka wiadomosc " + message);
                 playerIndex = message.charAt(1);
-                runThread = false;
+                receivingSocket.close();
                 break;
         }
     }
@@ -193,7 +187,6 @@ public class LobbyPlayer extends AbstractScreen {
 
             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName( serverIP), serverPort);
             c.send(sendPacket);
-            //System.out.println(getClass().getName() + ">>> Request packet sent to: 255.255.255.255 (DEFAULT)");
             c.close();
         } catch (Exception e) {}
     }
@@ -206,8 +199,17 @@ public class LobbyPlayer extends AbstractScreen {
         chatList.setSelectedIndex(-1);
     }
 
-    public ServerSocket getSocket(){
-        return mySocket;
+    @Override
+    protected void goBack(){
+        super.goBack();
+        dispose();
+    }
+
+    @Override
+    public void dispose(){
+        receivingSocket.close(); //killing thread
+        stage.dispose();
+        super.dispose();
     }
 
     public LobbyPlayer getThis(){

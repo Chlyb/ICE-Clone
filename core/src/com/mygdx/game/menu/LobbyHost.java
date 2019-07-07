@@ -1,10 +1,6 @@
 package com.mygdx.game.menu;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Net.Protocol;
-import com.badlogic.gdx.net.ServerSocket;
-import com.badlogic.gdx.net.Socket;
-import com.badlogic.gdx.net.SocketHints;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -25,63 +21,35 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.MulticastSocket;
 import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.List;
 
-import static java.lang.Thread.sleep;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.serverPort;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.clientPort;
 
 public class LobbyHost extends AbstractScreen {
-    private boolean runThread;
-    private String serverName;
     public final MultiplayerMenuScreen multiplayerMenu;
-    private ServerSocket serverSocket;
-    public List<Client> clients;
-    public final String groupAddress;
+
+    public String groupAddress = "";
+    private DatagramSocket socket;
+    public List<Client> clients = new ArrayList<Client>();
 
     private SelectBox<Integer> flagcountBox;
-
     private TextField messageField;
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> chatList;
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> playerList;
 
     public LobbyHost(final MyGdxGame game, final MultiplayerMenuScreen multiplayerMenu) {
         super(game, multiplayerMenu);
-        runThread = true;
-        clients = new ArrayList<Client>();
         this.multiplayerMenu = multiplayerMenu;
-        serverName = "ICE Server";
-        groupAddress = "230.0.0.0";
 
-        new Thread(new Runnable(){ //UDP BROADCAST THREAD
-            DatagramSocket socket;
-            @Override
-            public void run() {
-                try {
-                    socket = new DatagramSocket(8888, InetAddress.getByName("0.0.0.0"));
-                    socket.setBroadcast(true);
+        groupAddress += (int)(224 + Math.random() * 15);
+        groupAddress += ".";
+        groupAddress += (int)(Math.random() * 240);
+        groupAddress += ".0.0";
 
-                    while (runThread) {
-                        byte[] recvBuf = new byte[256];
-                        DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
-                        socket.receive(packet);
-
-                        String message = new String(packet.getData()).trim();
-                        processPacket( packet);
-
-                        if (message.equals("r")) {
-                            byte[] sendData = ("r" + groupAddress).getBytes(); //response
-                            //Send a response
-                            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
-                            socket.send(sendPacket);
-                        }
-                    }
-                    socket.close();
-                } catch (IOException ex) {
-                }
-            }
-        }).start();
+        createListener();
 
         Label chatLabel = new Label("Chat", skin, "default");
         chatLabel.setSize(120,40);
@@ -156,12 +124,10 @@ public class LobbyHost extends AbstractScreen {
         playBtn.setSize(150,50);
         playBtn.setPosition(415,230);
 
-        final Label errorLabel = new Label("", skin, "default");
-
         playBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                runThread = false;
+                socket.close();
                 sendStartInfo();
                 MultiplayerHost mh = new MultiplayerHost(game, getThis(), flagcountBox.getSelected(), clients.size());
                 game.setScreen(mh);
@@ -177,17 +143,10 @@ public class LobbyHost extends AbstractScreen {
         exitBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                //serverSocket.dispose();
-                game.setScreen(multiplayerMenu);
-                Gdx.input.setInputProcessor(multiplayerMenu.getInputMultiplexer());
+                goBack();
             }
         });
         stage.addActor(exitBtn);
-
-        errorLabel.setSize(150,40);
-        errorLabel.setPosition(600,170);
-        errorLabel.setAlignment(Align.center);
-        stage.addActor(errorLabel);
 
         refreshPlayers();
     }
@@ -195,6 +154,34 @@ public class LobbyHost extends AbstractScreen {
     public void render(float delta) {
         clearScreen();
         super.render(delta);
+    }
+
+    public void createListener(){
+        new Thread(new Runnable(){ //UDP BROADCAST THREAD
+            @Override
+            public void run() {
+                try {
+                    socket = new DatagramSocket(serverPort, InetAddress.getByName("0.0.0.0"));
+                    socket.setBroadcast(true);
+                    while (true) {
+                        byte[] recvBuf = new byte[256];
+                        DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
+                        socket.receive(packet);
+
+                        String message = new String(packet.getData()).trim();
+                        processPacket( packet);
+
+                        if (message.equals("r")) {
+                            byte[] sendData = ("r" + groupAddress).getBytes(); //response
+                            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
+                            socket.send(sendPacket);
+                        }
+                    }
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     public void refreshPlayers(){
@@ -226,7 +213,7 @@ public class LobbyHost extends AbstractScreen {
             group = InetAddress.getByName(groupAddress);
             buf = message.getBytes();
 
-            DatagramPacket packet = new DatagramPacket(buf, buf.length, group, 8890);
+            DatagramPacket packet = new DatagramPacket(buf, buf.length, group, clientPort);
             socket.send(packet);
             socket.close();
         }catch (IOException e){}
@@ -271,9 +258,8 @@ public class LobbyHost extends AbstractScreen {
         for(Client client : clients){
             try {
                 sendData = ("s" + i).getBytes();
-                DatagramPacket sendPacket = new DatagramPacket( sendData, sendData.length, InetAddress.getByName( client.ip), 8890);
+                DatagramPacket sendPacket = new DatagramPacket( sendData, sendData.length, InetAddress.getByName( client.ip), clientPort);
                 c.send(sendPacket);
-                //System.out.println(getClass().getName() + ">>> Request packet sent to: 255.255.255.255 (DEFAULT)");
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -284,6 +270,14 @@ public class LobbyHost extends AbstractScreen {
 
     public LobbyHost getThis(){
         return this;
+    }
+
+    @Override
+    protected void goBack(){
+        socket.close(); //killing thread
+        super.goBack();
+        stage.dispose();
+        dispose();
     }
 }
 

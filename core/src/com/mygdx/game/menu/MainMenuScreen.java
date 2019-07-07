@@ -10,7 +10,6 @@ import com.badlogic.gdx.utils.Align;
 import com.mygdx.game.MyGdxGame;
 
 public class MainMenuScreen extends AbstractScreen {
-    private String arg;
     private SinglePlayerMenu spm;
     private MultiplayerMenuScreen mms;
 
@@ -48,9 +47,8 @@ public class MainMenuScreen extends AbstractScreen {
             public void clicked(InputEvent event, float x, float y){
                 Gdx.input.setInputProcessor(mms.getInputMultiplexer());
                 mms.refreshIP();
-                mms.refreshServers();
                 game.setScreen(mms);
-
+                mms.refreshServers();
             }
         });
         stage.addActor(multiplayerBtn);

@@ -16,7 +16,7 @@ import com.mygdx.game.gameSession.AbstractSession;
 import com.mygdx.game.gameSession.SinglePlayerSession;
 
 public class ResumeScreen extends AbstractScreen {
-    private final AbstractScreen previousScreen;
+    private final AbstractScreen previousScreen; //overriden because back button leads back to session
     private final AbstractSession session;
 
     public ResumeScreen(MyGdxGame game, AbstractScreen previousScreen, AbstractSession session){
@@ -48,17 +48,16 @@ public class ResumeScreen extends AbstractScreen {
         exitBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                game.setScreen( previousScreen);
-                Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
+                session.dispose();
             }
         });
         stage.addActor(exitBtn);
     }
 
     @Override
-    public boolean keyDown(int keycode) {
+    protected void goBack(){
+        super.goBack();
         session.unpause();
-        return super.keyDown(keycode);
     }
 
     @Override

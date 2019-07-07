@@ -57,6 +57,14 @@ public abstract class AbstractScreen implements Screen, InputProcessor {
         return inputMultiplexer;
     }
 
+    protected void goBack(){
+        if(previousScreen == null) Gdx.app.exit();
+        else{
+            game.setScreen(previousScreen);
+            Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
+        }
+    }
+
     @Override
     public void render(float delta){
         camera.update();
@@ -104,14 +112,15 @@ public abstract class AbstractScreen implements Screen, InputProcessor {
     }
 
     @Override
-    public boolean keyDown(int keycode) {
+    public boolean keyDown(int keycode) {/*
         if(keycode == Input.Keys.BACK || keycode == Input.Keys.E){
             if(previousScreen == null) Gdx.app.exit();
             else{
                 game.setScreen(previousScreen);
                 Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
             }
-        }
+        }*/
+        if(keycode == Input.Keys.BACK || keycode == Input.Keys.E) goBack();
         return false;
     }
 

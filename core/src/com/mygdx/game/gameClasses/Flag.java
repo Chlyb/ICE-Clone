@@ -44,7 +44,7 @@ public class Flag extends Entity implements Serializable {
     public void move(float dt){
         if(health < team.getFlagHealth()){
             if(health <= 0){
-                changeTeam(shotBy.getTeam());
+                if(shotBy != null) changeTeam(shotBy.getTeam());
             }
             else health += 5 * dt;
         }

@@ -13,7 +13,7 @@ public class Team implements Serializable {
     transient private int damage;
     transient private int health;
     transient private int flagHealth;
-    transient private int speed;
+    private int speed;
 
     transient private int score;
     transient private int scoreToNextLevel;

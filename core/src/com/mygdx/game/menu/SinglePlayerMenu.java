@@ -95,8 +95,7 @@ public class SinglePlayerMenu extends AbstractScreen {
         exitBtn.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y){
-                game.setScreen( mainMenu);
-                Gdx.input.setInputProcessor(mainMenu.getInputMultiplexer());
+                goBack();
             }
         });
         stage.addActor(exitBtn);

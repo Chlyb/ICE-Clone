@@ -6,33 +6,32 @@ import com.mygdx.game.MyGdxGame;
 import com.mygdx.game.gameClasses.Flag;
 import com.mygdx.game.gameClasses.Team;
 import com.mygdx.game.gameClasses.GamePacket;
-import com.mygdx.game.menu.AbstractScreen;
 import com.mygdx.game.menu.LobbyHost;
 import com.mygdx.game.menu.ResumeScreen;
 
-import java.io.FileWriter;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.SocketException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.zip.DataFormatException;
 
-import static com.mygdx.game.CompressionUtils.decompress;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.sessionPort;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.clientPort;
+
 
 public class MultiplayerHost extends AbstractSession {
     private LobbyHost lobby;
     private GamePacket gp;
     private Team playerTeam;
     private AtomicLong physicsTime = new AtomicLong(0);
+    private long sendTime = System.currentTimeMillis();
     private byte tick = 0;
     public static final int fragmentCount = 8;
     public static final int payload = 1471;
+
+    private DatagramSocket receivingSocket;
 
     public MultiplayerHost(MyGdxGame game, LobbyHost lobby, int flagCount, int enemyCount) {
         super(game, null, 1);
@@ -54,24 +53,17 @@ public class MultiplayerHost extends AbstractSession {
             @Override
             public void run() {
                 try {
-                    try {
-                        Thread.sleep(10);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    DatagramSocket socket = null;
-                    try {
-                        socket = new DatagramSocket(8833, InetAddress.getByName("0.0.0.0"));
-                    } catch (SocketException e) {
-                        e.getMessage();
-                    }
-
-                    while (!finished) {
+                    Thread.sleep(10);
+                    receivingSocket = new DatagramSocket(sessionPort, InetAddress.getByName("0.0.0.0"));
+                    while (true) {
                         DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                        socket.receive(packet);
+                        receivingSocket.receive(packet);
                         processPacket(packet);
                     }
                 } catch (IOException ex) {
+                    ex.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         }).start();
@@ -79,39 +71,41 @@ public class MultiplayerHost extends AbstractSession {
         final Runnable copyToSendAndRender = new Runnable() {
             @Override
             public void run() {
-                if(tick % 5 != 0) return; //big tickrate causes nothing but problems
                 byte[] bytes = gp.getBytes();
-                try {
-                    byte[] buf = CompressionUtils.compress(bytes);
-                    DatagramSocket socket = new DatagramSocket();
-                    InetAddress group = InetAddress.getByName(getLobby().groupAddress);
 
-                    DatagramPacket packet;
+                if(System.currentTimeMillis() - sendTime > 100) { //big tickrate causes nothing but problems
+                    try {
+                        byte[] buf = CompressionUtils.compress(bytes);
+                        DatagramSocket socket = new DatagramSocket();
+                        InetAddress group = InetAddress.getByName(getLobby().groupAddress);
 
-                    byte[] subarr;
+                        DatagramPacket packet;
 
-                    for(int i = 0; i < fragmentCount; ++i){
-                        if((i+1)*(payload) < buf.length){
-                            subarr = new byte[payload+1];
-                            System.arraycopy(buf, i*(payload), subarr, 0, payload);
-                            subarr[payload] = tick;
-                            packet = new DatagramPacket(subarr, 0, subarr.length, group, 8890 + i);
+                        byte[] subarr;
+
+                        for (int i = 0; i < fragmentCount; ++i) {
+                            if ((i + 1) * (payload) < buf.length) {
+                                subarr = new byte[payload + 1];
+                                System.arraycopy(buf, i * (payload), subarr, 0, payload);
+                                subarr[payload] = tick;
+                                packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
+                            } else if (i * payload < buf.length) {
+                                subarr = new byte[buf.length - i * payload + 1];
+                                System.arraycopy(buf, i * payload, subarr, 0, buf.length - i * payload);
+                                subarr[buf.length - i * payload] = tick;
+                                packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
+
+                            } else {
+                                subarr = new byte[1];
+                                subarr[0] = tick;
+                                packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
+                            }
+                            socket.send(packet);
                         }
-                        else if(i*payload < buf.length){
-                            subarr = new byte[buf.length - i*payload + 1];
-                            System.arraycopy(buf, i*payload, subarr, 0, buf.length - i*payload);
-                            subarr[buf.length - i*payload] = tick;
-                            packet = new DatagramPacket(subarr, 0, subarr.length, group, 8890 + i);
-
-                        }else{
-                            subarr = new byte[1];
-                            subarr[0] = tick;
-                            packet = new DatagramPacket(subarr, 0, subarr.length, group, 8890 + i);
-                        }
-                        socket.send(packet);
+                        socket.close();
+                        sendTime = System.currentTimeMillis();
+                    } catch (IOException e) {
                     }
-                    socket.close();
-                } catch (IOException e) {
                 }
                 renderedGp = GamePacket.getObject(bytes);
                 updateUI();
@@ -135,36 +129,33 @@ public class MultiplayerHost extends AbstractSession {
 
     @Override
     void end(final boolean definitive) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if(definitive){
-                    finishing = true;
+        if(definitive) {
+            finishing = true;
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
                     try {
-                        Thread.sleep(4000);
+                        Thread.sleep(3000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                     finished = true;
-                    game.setScreen(lobby);
-                    Gdx.input.setInputProcessor(lobby.getInputMultiplexer());
+                    dispose();
                 }
-            }
-        }).start();
+            }).start();
+        }
+    }
+
+    @Override
+    protected void goBack(){
+        paused.set(true);
+        super.goBack();
     }
 
     @Override
     public void unpause() {
         super.unpause();
         physicsTime.set(System.currentTimeMillis());
-    }
-
-    @Override
-    public boolean keyDown(int keycode) {
-        paused.set(true);
-        game.setScreen(previousScreen);
-        Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
-        return false;
     }
 
     @Override
@@ -189,13 +180,22 @@ public class MultiplayerHost extends AbstractSession {
             case 'u': //upgrade
                 gp.getTeams().get(playerIndex).upgrade(message.charAt(2));
                 break;
-            case 'l':
-                break;
         }
     }
 
     private LobbyHost getLobby() {
         return lobby;
+    }
+
+    @Override
+    public void dispose(){
+        receivingSocket.close();
+        stage.dispose();
+        super.dispose();
+
+        lobby.createListener();
+        Gdx.input.setInputProcessor(lobby.getInputMultiplexer());
+        game.setScreen(lobby);
     }
 }
 

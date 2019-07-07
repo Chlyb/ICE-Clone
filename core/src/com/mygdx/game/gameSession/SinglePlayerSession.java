@@ -88,25 +88,21 @@ public final class SinglePlayerSession extends AbstractSession {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                finished = true;
-                game.setScreen(spm);
-                Gdx.input.setInputProcessor(spm.getInputMultiplexer());
+                dispose();
             }
         }).start();
+    }
+
+    @Override
+    protected void goBack(){
+        paused.set(true);
+        super.goBack();
     }
 
     @Override
     public void unpause() {
         super.unpause();
         physicsTime.set(System.currentTimeMillis());
-    }
-
-    @Override
-    public boolean keyDown(int keycode) {
-        paused.set(true);
-        game.setScreen(previousScreen);
-        Gdx.input.setInputProcessor(previousScreen.getInputMultiplexer());
-        return false;
     }
 
     @Override
@@ -117,5 +113,13 @@ public final class SinglePlayerSession extends AbstractSession {
     @Override
     protected void upgrade(int upgrade) {
         playerTeam.upgrade(upgrade);
+    }
+
+    @Override
+    public void dispose(){
+        finished = true;
+        super.dispose();
+        game.setScreen( spm);
+        Gdx.input.setInputProcessor(spm.getInputMultiplexer());
     }
 }

@@ -3,7 +3,6 @@ package com.mygdx.game.gameSession;
 import com.badlogic.gdx.Gdx;
 import com.mygdx.game.MyGdxGame;
 import com.mygdx.game.gameClasses.GamePacket;
-import com.mygdx.game.menu.AbstractScreen;
 import com.mygdx.game.menu.LobbyPlayer;
 import com.mygdx.game.menu.ResumeScreen;
 
@@ -22,11 +21,14 @@ import java.util.zip.DataFormatException;
 import static com.mygdx.game.CompressionUtils.decompress;
 import static com.mygdx.game.gameSession.MultiplayerHost.fragmentCount;
 import static com.mygdx.game.gameSession.MultiplayerHost.payload;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.sessionPort;
+import static com.mygdx.game.menu.MultiplayerMenuScreen.clientPort;
 
 public class MultiplayerClient extends AbstractSession {
     private LobbyPlayer lobby;
     private LinkedList <Fragment> [] receivedFragments;
     private LinkedList <Fragment> [] preservedFragments;
+    private MulticastSocket[] sockets;
 
     private class Fragment { //packet fragment
         final byte tick;
@@ -77,12 +79,9 @@ public class MultiplayerClient extends AbstractSession {
         public void run() {
             byte[] buf = new byte[payload + 1];
             try {
-                MulticastSocket socket = new MulticastSocket(8890 + i);
-                InetAddress group = InetAddress.getByName(lobby.groupAddress);
-                socket.joinGroup(group);
-                while (!finished) {
+                while (true) {
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
-                    socket.receive(packet);
+                    sockets[i].receive(packet);
                     Fragment sub = new Fragment(packet.getData(), packet.getLength());
                     handleFragment(i, sub);
                 }
@@ -101,20 +100,36 @@ public class MultiplayerClient extends AbstractSession {
 
         this.receivedFragments = new LinkedList[fragmentCount];
         this.preservedFragments = new LinkedList[fragmentCount];
+        this.sockets = new MulticastSocket[fragmentCount];
+
+        InetAddress group = null;
+        try {
+            group = InetAddress.getByName(lobby.groupAddress);
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
 
         for (int i = 0; i < fragmentCount; ++i) {
             this.receivedFragments[i] = new LinkedList<>();
             this.preservedFragments[i] = new LinkedList<>();
+
+            try {
+                sockets[i] = new MulticastSocket(clientPort + i);
+                sockets[i].joinGroup(group);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
             new Thread(new listener(i)).start();
         }
     }
 
     @Override
     void end(final boolean definitive) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                if(definitive) {
+        if(definitive) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
                     finishing = true;
                     try {
                         Thread.sleep(3000);
@@ -122,11 +137,11 @@ public class MultiplayerClient extends AbstractSession {
                         e.printStackTrace();
                     }
                     finished = true;
-                    game.setScreen(lobby);
-                    Gdx.input.setInputProcessor(lobby.getInputMultiplexer());
+                    dispose();
                 }
-            }
-        }).start();
+
+            }).start();
+        }
     }
 
     @Override
@@ -141,7 +156,7 @@ public class MultiplayerClient extends AbstractSession {
         try {
             DatagramSocket c = new DatagramSocket();
             byte[] sendData = packet.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(lobby.serverIP), 8833);
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(lobby.serverIP), sessionPort);
             c.send(sendPacket);
             c.close();
         } catch (Exception e) {
@@ -159,7 +174,7 @@ public class MultiplayerClient extends AbstractSession {
         try {
             DatagramSocket c = new DatagramSocket();
             byte[] sendData = packet.getBytes();
-            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(lobby.serverIP), 8833);
+            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName(lobby.serverIP), sessionPort);
             c.send(sendPacket);
             c.close();
         } catch (Exception e) {
@@ -233,5 +248,18 @@ public class MultiplayerClient extends AbstractSession {
                 e.printStackTrace();
             }
         }
+    }
+
+    @Override
+    public void dispose(){
+        for(int i=0;i<fragmentCount;++i){
+            sockets[i].close();
+        }
+        stage.dispose();
+        super.dispose();
+
+        lobby.createListener();
+        Gdx.input.setInputProcessor(lobby.getInputMultiplexer());
+        game.setScreen(lobby);
     }
 }

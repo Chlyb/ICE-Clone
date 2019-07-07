@@ -29,11 +29,15 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.List;
 
+
 public class MultiplayerMenuScreen extends AbstractScreen {
     private final MainMenuScreen mainMenu;
 
+    public final static int clientPort = 19910;
+    public final static int serverPort = 19927;
+    public final static int sessionPort = 19991;
+
     private String IP;
-    private String arg;
     private com.badlogic.gdx.scenes.scene2d.ui.List<String> serverList;
     private TextButton networkBtn;
     private TextField nickField;
@@ -55,13 +59,6 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         nickField = new TextField("Player", skin);
         nickField.setSize(150, 50);
         nickField.setPosition(385, 405);
-        nickField.addListener(new ChangeListener() {
-            @Override
-            public void changed(ChangeEvent event, Actor actor) {
-                arg = nickField.getText();
-                //System.out.println(arg);
-            }
-        });
         stage.addActor(nickField);
 
         Label nickLabel = new Label("Nick", skin, "default");
@@ -93,9 +90,11 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         joinBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                LobbyPlayer lp = new LobbyPlayer(game, getThis(), serverList.getSelected().split("/")[0], serverList.getSelected().split("/")[1]);
-                game.setScreen(lp);
-                Gdx.input.setInputProcessor(lp.getInputMultiplexer());
+                if(serverList.getSelected() != "") {
+                    LobbyPlayer lp = new LobbyPlayer(game, getThis(), serverList.getSelected().split("/")[0], serverList.getSelected().split("/")[1]);
+                    game.setScreen(lp);
+                    Gdx.input.setInputProcessor(lp.getInputMultiplexer());
+                }
             }
         });
         stage.addActor(joinBtn);
@@ -106,9 +105,11 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         hostBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                LobbyHost lh = new LobbyHost(game, getThis());
-                game.setScreen(lh);
-                Gdx.input.setInputProcessor(lh.getInputMultiplexer());
+                if(IP != "") {
+                    LobbyHost lh = new LobbyHost(game, getThis());
+                    game.setScreen(lh);
+                    Gdx.input.setInputProcessor(lh.getInputMultiplexer());
+                }
             }
         });
         stage.addActor(hostBtn);
@@ -135,35 +136,27 @@ public class MultiplayerMenuScreen extends AbstractScreen {
         backBtn.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
-                Gdx.input.setInputProcessor(mainMenu.stage);
-                game.setScreen(mainMenu);
+                goBack();
             }
         });
         stage.addActor(backBtn);
     }
 
     public void refreshServers(){
-        final ArrayList<String> serverNames = new ArrayList<String>();
         // Find the server using UDP broadcast
-        if(networkBtn.getText() == "No Internet connection") {
+        if(IP == "") {
+            refreshIP();
+        }
+        if(IP == "") {
             return;
         }
+
         try {
-            //Open a random port to send the package
             final DatagramSocket c = new DatagramSocket();
             c.setBroadcast(true);
 
             byte[] sendData = "r".getBytes(); //request
 
-            //Try the 255.255.255.255 first
-            /*
-            try {
-                DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, InetAddress.getByName("255.255.255.255"), 8888);
-                c.send(sendMessage);
-                System.out.println(getClass().getName() + ">>> Request packet sent to: 255.255.255.255 (DEFAULT)");
-            } catch (Exception e) {
-            }
-            */
             // Broadcast the message over all the network interfaces
             Enumeration interfaces = NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
@@ -180,31 +173,26 @@ public class MultiplayerMenuScreen extends AbstractScreen {
                     }
 
                     // Send the broadcast package!
-                    try {
-                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, broadcast, 8888);
-                        c.send(sendPacket);
-                    } catch (Exception e) {
-                    }
+
+                    DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, broadcast, serverPort);
+                    c.send(sendPacket);
                 }
             }
 
-            Thread t = new Thread(new ServerFinder(c, serverNames));
+            Thread t = new Thread(new ServerFinder(c, serverList));
             t.start();
-            try
-            {
-                t.join(500);
-                t.interrupt();
-            }
-            catch(InterruptedException ex){}
+            Thread.sleep(100);
             c.close();
-        } catch (IOException ex) {}
-
-        String[] array = serverNames.toArray(new String[serverNames.size()]);
-        serverList.setItems(array);
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void refreshIP(){
         List<String> addresses = new ArrayList<String>();
+        IP = "";
         try {
             Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
             for(NetworkInterface ni : Collections.list(interfaces)){
@@ -215,13 +203,9 @@ public class MultiplayerMenuScreen extends AbstractScreen {
                     }
                 }
             }
-            System.out.println(addresses);
             if(addresses.size() > 1) IP  = addresses.get(1);
-            else IP = "";
-            //IP = IP.substring(0, IP.length() - 2);
         } catch (SocketException e) {
             e.printStackTrace();
-            IP = "";
         }
 
         if(IP == "") networkBtn.setText("No Internet connection");

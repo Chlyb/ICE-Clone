@@ -72,6 +72,7 @@ public class MultiplayerHost extends AbstractSession {
             @Override
             public void run() {
                 byte[] bytes = gp.getBytes();
+				if(bytes == null) return;
 
                 if(System.currentTimeMillis() - sendTime > 100) { //big tickrate causes nothing but problems
                     try {
@@ -80,7 +81,7 @@ public class MultiplayerHost extends AbstractSession {
                         InetAddress group = InetAddress.getByName(getLobby().groupAddress);
 
                         DatagramPacket packet;
-
+                        /*
                         byte[] subarr;
 
                         for (int i = 0; i < fragmentCount; ++i) {
@@ -101,7 +102,34 @@ public class MultiplayerHost extends AbstractSession {
                                 packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
                             }
                             socket.send(packet);
+                        }*/
+
+                        byte swap;
+                        byte empty[] = new byte[1];
+
+                        for(int i = 0; i < fragmentCount; ++i){
+                            if((i+1)*payload < buf.length){//o tu zmiana
+                                swap = buf[(i+1)*payload];
+                                buf[(i+1)*payload] = tick;
+                                DatagramPacket dp = new DatagramPacket(buf, i * payload, payload + 1, group, clientPort + i);
+                                socket.send(dp);
+                                buf[(i+1)*payload] = swap;
+                            }
+                            else if(i*payload < buf.length){
+                                byte end[] = new byte[buf.length - i*payload + 1];
+                                System.arraycopy( buf, i * payload, end, 0 , buf.length - i*payload );
+                                end[end.length - 1] = tick;
+
+                                DatagramPacket dp = new DatagramPacket(end, 0, end.length, group, clientPort + i);
+                                socket.send(dp);
+                            }
+                            else{
+                                empty[0] = tick;
+                                DatagramPacket dp = new DatagramPacket(empty, 1, group, clientPort + i);
+                                socket.send(dp);
+                            }
                         }
+
                         socket.close();
                         sendTime = System.currentTimeMillis();
                     } catch (IOException e) {

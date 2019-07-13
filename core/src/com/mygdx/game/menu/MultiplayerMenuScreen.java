@@ -181,7 +181,7 @@ public class MultiplayerMenuScreen extends AbstractScreen {
 
             Thread t = new Thread(new ServerFinder(c, serverList));
             t.start();
-            Thread.sleep(100);
+            Thread.sleep(400);
             c.close();
         } catch (IOException ex) {
             ex.printStackTrace();

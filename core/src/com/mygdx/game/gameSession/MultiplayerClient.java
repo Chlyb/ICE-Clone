@@ -34,10 +34,12 @@ public class MultiplayerClient extends AbstractSession {
         final byte tick;
         final byte[] data;
         final int length;
-        Fragment(byte[] data, int len) {
+        final int offset;
+        Fragment(byte[] data, int len, int off) {
             this.length = len - 1;
-            this.tick = data[length];
+            this.offset = off;
             this.data = data;
+            this.tick = data[offset + length];
         }
     }
 
@@ -82,7 +84,7 @@ public class MultiplayerClient extends AbstractSession {
                 while (true) {
                     DatagramPacket packet = new DatagramPacket(buf, buf.length);
                     sockets[i].receive(packet);
-                    Fragment sub = new Fragment(packet.getData(), packet.getLength());
+                    Fragment sub = new Fragment(packet.getData(), packet.getLength(), packet.getOffset());
                     handleFragment(i, sub);
                 }
             } catch (UnknownHostException e) {
@@ -217,7 +219,7 @@ public class MultiplayerClient extends AbstractSession {
             ByteArrayOutputStream os = new ByteArrayOutputStream();
             try {
                 for (int j = 0; j < fragmentCount; ++j) {
-                    os.write(receivedFragments[j].get(positions[j]).data, 0, receivedFragments[j].get(positions[j]).length);
+                    os.write(receivedFragments[j].get(positions[j]).data, receivedFragments[j].get(positions[j]).offset, receivedFragments[j].get(positions[j]).length);
                 }
                 os.close();
                 new Thread(new packetToRender(os)).start();

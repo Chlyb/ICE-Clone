@@ -18,6 +18,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -173,29 +174,31 @@ public class GamePacket implements Serializable{
     }
 
     public byte[] getBytes(){
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
             ObjectOutputStream os = new ObjectOutputStream(out);
             os.writeObject(this);
-        } catch (IOException e) {
+            return out.toByteArray();
+        } catch(ConcurrentModificationException e) {
+        }
+        catch(IOException e) {
             e.printStackTrace();
         }
-        return out.toByteArray();
+        return null;
     }
 
     public static GamePacket getObject( byte[] bytes){
-        GamePacket gp = null;
         ByteArrayInputStream in = new ByteArrayInputStream( bytes,0, bytes.length);
         try {
             ObjectInputStream is = new ObjectInputStream(in);
-            gp = (GamePacket) is.readObject();
+            GamePacket gp = (GamePacket) is.readObject();
+            return gp;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        if(gp == null) return new GamePacket();
-        return gp;
+        return null;
     }
 
     public GamePacket clone(){

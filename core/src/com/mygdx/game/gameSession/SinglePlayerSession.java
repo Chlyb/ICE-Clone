@@ -54,7 +54,9 @@ public final class SinglePlayerSession extends AbstractSession {
         final Runnable copyToRender = new Runnable() {
             @Override
             public void run() {
-                renderedGp = gp.clone();
+                GamePacket clone = gp.clone();
+                if(clone == null) return;
+                renderedGp = clone;
                 renderedGp.goOneTickBack();
                 updateUI();
                 renderTime.set(System.currentTimeMillis());

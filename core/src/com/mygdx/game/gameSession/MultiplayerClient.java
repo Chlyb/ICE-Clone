@@ -58,6 +58,7 @@ public class MultiplayerClient extends AbstractSession {
                 ObjectInputStream is = new ObjectInputStream( in );
 
                 GamePacket receivedGP = (GamePacket) is.readObject();
+                if(receivedGP == null) return;
                 receivedGP.goOneTickBack();
                 renderedGp = receivedGP;
                 updateUI();

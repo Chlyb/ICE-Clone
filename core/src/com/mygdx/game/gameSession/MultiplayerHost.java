@@ -135,7 +135,9 @@ public class MultiplayerHost extends AbstractSession {
                     } catch (IOException e) {
                     }
                 }
-                renderedGp = GamePacket.getObject(bytes);
+                GamePacket clone = GamePacket.getObject(bytes);
+                if(clone == null) return;
+                renderedGp = clone;
                 updateUI();
                 renderTime.set(System.currentTimeMillis());
             }

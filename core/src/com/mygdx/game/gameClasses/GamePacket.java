@@ -180,14 +180,17 @@ public class GamePacket implements Serializable{
             os.writeObject(this);
             return out.toByteArray();
         } catch(ConcurrentModificationException e) {
+            return null;
         }
         catch(IOException e) {
-            e.printStackTrace();
+            return null;
+            //e.printStackTrace();
         }
-        return null;
+        //return null;
     }
 
     public static GamePacket getObject( byte[] bytes){
+        if(bytes == null) return null;
         ByteArrayInputStream in = new ByteArrayInputStream( bytes,0, bytes.length);
         try {
             ObjectInputStream is = new ObjectInputStream(in);
@@ -195,10 +198,12 @@ public class GamePacket implements Serializable{
             return gp;
         } catch (IOException e) {
             e.printStackTrace();
+            return null;
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
+        //return null;
     }
 
     public GamePacket clone(){

@@ -13,16 +13,19 @@ public class CollisionUpdate implements Runnable {
     }
 
     public void run() {
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+
         Quadtree collisionTree = new Quadtree(1920/2-100,1080/2-100,1920+200,1080+200,0);
 
         for(Ship ship : gp.getShips()){
-            collisionTree.addShipColl(ship);
+            collisionTree.addShipCollider2(ship);
         }
 
         for(Flag flag : gp.getFlags()){
             collisionTree.addFlagColl(flag);
         }
 
+        //gp.collisionTree = collisionTree;
         collisionTree.collide();
     }
 }

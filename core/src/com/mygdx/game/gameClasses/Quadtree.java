@@ -1,22 +1,22 @@
 package com.mygdx.game.gameClasses;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Vector2;
-import com.mygdx.game.workers.Collider;
-import com.mygdx.game.workers.Ranger;
 
-import java.util.ArrayList;
+import java.io.Serializable;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 
 import static java.lang.Math.abs;
 
-public class Quadtree {
+public class Quadtree implements Serializable {
 
     private final int x;
     private final int y;
     private final int w;
     private final int h;
-    private List<Ship> ships;
-    private List<Flag> flags;
+    transient private List<Ship> ships;
+    transient private List<Flag> flags;
     private Boolean divided;
     private final int depth;
     private Quadtree quad1;
@@ -40,13 +40,23 @@ public class Quadtree {
     private final int Y_sub_Hdiv2_sub_10;
     private final int Y_plus_Hdiv2_plus_10;
 
+    private final int X_plus_10;
+    private final int X_min_10;
+    private final int Y_plus_10;
+    private final int Y_min_10;
+
+    private final int X_plus_25;
+    private final int X_min_25;
+    private final int Y_plus_25;
+    private final int Y_min_25;
+
     public Quadtree(int x, int y, int w, int h, int depth) {
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
-        ships = new ArrayList<Ship>();
-        flags = new ArrayList<Flag>();
+        ships = new LinkedList<Ship>();
+        flags = new LinkedList<Flag>();
         divided = false;
         this.depth = depth;
 
@@ -65,9 +75,19 @@ public class Quadtree {
         X_plus_Wdiv2_plus_10 = X_plus_Wdiv2_plus_25 - 15;
         Y_sub_Hdiv2_sub_10 = Y_sub_Hdiv2_sub_25 + 15;
         Y_plus_Hdiv2_plus_10 = Y_plus_Hdiv2_plus_25 - 15;
+
+        X_plus_10 = x + 10;
+        X_min_10 = x - 10;
+        Y_plus_10 = y + 10;
+        Y_min_10 = y - 10;
+
+        X_plus_25 = x + 25;
+        X_min_25 = x - 25;
+        Y_plus_25 = y + 25;
+        Y_min_25 = y - 25;
     }
 
-    private void subdivideColl(){
+    private void subdivideColliderTree(){
         divided = true;
         quad1 = new Quadtree( x + Wdiv4, y + Hdiv4, Wdiv2, Hdiv2, depth_plus_1);
         quad2 = new Quadtree( x - Wdiv4, y + Hdiv4, Wdiv2, Hdiv2, depth_plus_1);
@@ -75,10 +95,7 @@ public class Quadtree {
         quad4 = new Quadtree( x + Wdiv4, y - Hdiv4, Wdiv2, Hdiv2, depth_plus_1);
 
         for(Ship ship : ships){
-            quad1.addShipColl(ship);
-            quad2.addShipColl(ship);
-            quad3.addShipColl(ship);
-            quad4.addShipColl(ship);
+            this.addShipColl2Divided(ship);
         }
 
         for(Flag flag : flags){
@@ -89,30 +106,107 @@ public class Quadtree {
         }
     }
 
-    public void addShipColl(Ship ship){
-        //if(x - w/2 - 10 < ship.getPos().x && ship.getPos().x < x + w/2 + 10 && y - h/2 - 10 < ship.getPos().y && ship.getPos().y < y + h/2 + 10){
-        if(X_sub_Wdiv2_sub_10 < ship.getPos().x && ship.getPos().x < X_plus_Wdiv2_plus_10 && Y_sub_Hdiv2_sub_10 < ship.getPos().y && ship.getPos().y < Y_plus_Hdiv2_plus_10){
-            if(!divided){
-                if(ships.size() < 4 || depth >= 5){
-                    ships.add(ship);
-                }
-                else{
-                    subdivideColl();
-
-                    quad1.addShipColl(ship);
-                    quad2.addShipColl(ship);
-                    quad3.addShipColl(ship);
-                    quad4.addShipColl(ship);
-                }
+    public void addShipCollider2(Ship ship){
+        if(!divided){
+            if(ships.size() < 4 || depth >= 5){
+                ships.add(ship);
             }
             else{
+                ships.add(ship);
+                subdivideColliderTree();
+            }
+            return;
+        }
 
-                quad1.addShipColl(ship);
-                quad2.addShipColl(ship);
-                quad3.addShipColl(ship);
-                quad4.addShipColl(ship);
+        if(ship.pos.x < X_min_10 ) {
+            if(ship.pos.y < Y_min_10) {
+                quad3.addShipCollider2(ship);
+            }
+            else if(ship.pos.y > Y_plus_10) {
+                quad2.addShipCollider2(ship);
+            }
+            else {
+                quad3.addShipCollider2(ship);
+                quad2.addShipCollider2(ship);
+            }
+        }else if(ship.pos.x > X_plus_10){
+            if(ship.pos.y < Y_min_10) {
+                quad4.addShipCollider2(ship);
+            }
+            else if(ship.pos.y > Y_plus_10) {
+                quad1.addShipCollider2(ship);
+            }
+            else {
+                quad4.addShipCollider2(ship);
+                quad1.addShipCollider2(ship);
+            }
+        }else {
+            if(ship.pos.y < Y_min_10) {
+                quad3.addShipCollider2(ship);
+                quad4.addShipCollider2(ship);
+            }
+            else if(ship.pos.y > Y_plus_10) {
+                quad2.addShipCollider2(ship);
+                quad1.addShipCollider2(ship);
+            }
+            else {
+                quad1.addShipCollider2(ship);
+                quad2.addShipCollider2(ship);
+                quad3.addShipCollider2(ship);
+                quad4.addShipCollider2(ship);
             }
         }
+    }
+
+    public void addShipColl2Divided(Ship ship){
+        if(ship.pos.x < X_min_10 ) {
+            if(ship.pos.y < Y_min_10) {
+                quad3.addShipCollider2(ship);
+            }
+            else if(ship.pos.y > Y_plus_10) {
+                quad2.addShipCollider2(ship);
+            }
+            else {
+                quad3.addShipCollider2(ship);
+                quad2.addShipCollider2(ship);
+            }
+        }else if(ship.pos.x > X_plus_10){
+            if(ship.pos.y < Y_min_10) {
+                quad4.addShipCollider2(ship);
+            }
+            else if(ship.pos.y > Y_plus_10) {
+                quad1.addShipCollider2(ship);
+            }
+            else {
+                quad4.addShipCollider2(ship);
+                quad1.addShipCollider2(ship);
+            }
+        }else {
+            if(ship.pos.y < Y_min_10) {
+                quad3.addShipCollider2(ship);
+                quad4.addShipCollider2(ship);
+            }
+            else if(ship.pos.y > Y_plus_10) {
+                quad2.addShipCollider2(ship);
+                quad1.addShipCollider2(ship);
+            }
+            else {
+                quad1.addShipCollider2(ship);
+                quad2.addShipCollider2(ship);
+                quad3.addShipCollider2(ship);
+                quad4.addShipCollider2(ship);
+            }
+        }
+    }
+
+    public int cellCount(){
+        if(!divided) return 1;
+        return quad1.cellCount() + quad2.cellCount() + quad3.cellCount() + quad4.cellCount();
+    }
+
+    public int shipCount(){
+        if(!divided) return ships.size();
+        return quad1.shipCount() + quad2.shipCount() + quad3.shipCount() + quad4.shipCount();
     }
 
     public void addFlagColl(Flag flag){
@@ -131,41 +225,38 @@ public class Quadtree {
 
     public void collide(){
         if(divided){
-            if(depth == 0){
-                Thread t1 = new Thread(new Collider(quad1));
-                Thread t2 = new Thread(new Collider(quad2));
-                Thread t3 = new Thread(new Collider(quad3));
-                Thread t4 = new Thread(new Collider(quad4));
-
-                t1.start();
-                t2.start();
-                t3.start();
-                t4.start();
-
-                try {
-                    t1.join();
-                    t2.join();
-                    t3.join();
-                    t4.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            else{
-                quad1.collide();
-                quad2.collide();
-                quad3.collide();
-                quad4.collide();
-            }
+            quad1.collide();
+            quad2.collide();
+            quad3.collide();
+            quad4.collide();
         }
         else{
-            for(int i = 0; i < ships.size(); ++i){
+
+            /*
+            for(int i = 0; i < ships.size(); ++i) {
                 float ship1x = ships.get(i).getPos().x;
                 float ship1y = ships.get(i).getPos().y;
-                for(int j = i + 1; j < ships.size(); ++j){
-                    if(abs(ship1x - ships.get(j).getPos().x) < 20){
-                        if(abs(ship1y - ships.get(j).getPos().y) < 20){
-                            collideShip( ships.get(i), ships.get(j));
+                for (int j = i + 1; j < ships.size(); ++j) {
+                    if (abs(ship1x - ships.get(j).getPos().x) < 20) {
+                        if (abs(ship1y - ships.get(j).getPos().y) < 20) {
+                            collideShip(ships.get(i), ships.get(j));
+                        }
+                    }
+                }
+            }
+            */
+
+            ListIterator<Ship> it = ships.listIterator();
+            while(it.hasNext()) {
+                Ship ship = it.next();
+                float ship1x = ship.getPos().x;
+                float ship1y = ship.getPos().y;
+                ListIterator <Ship> it2 = ships.listIterator(it.nextIndex());
+                while(it2.hasNext()) {
+                    Ship ship2 = it2.next();
+                    if (abs(ship1x - ship2.getPos().x) < 20) {
+                        if (abs(ship1y - ship2.getPos().y) < 20) {
+                            collideShip(ship, ship2);
                         }
                     }
                 }
@@ -187,10 +278,7 @@ public class Quadtree {
         quad4 = new Quadtree( x + Wdiv4, y - Hdiv4, Wdiv2, Hdiv2, depth_plus_1);
 
         for(Ship ship : ships){
-            quad1.addShipRange(ship);
-            quad2.addShipRange(ship);
-            quad3.addShipRange(ship);
-            quad4.addShipRange(ship);
+            this.addShipRange2(ship);
         }
 
         for(Flag flag : flags){
@@ -227,6 +315,58 @@ public class Quadtree {
         }
     }
 
+    public void addShipRange2(Ship ship){
+        if(!divided){
+            if(ships.size() < 4 || depth >= 4){
+                ships.add(ship);
+            }
+            else{
+                ships.add(ship);
+                subdivideRange();
+            }
+            return;
+        }
+
+        if(ship.pos.x < X_min_25 ) {
+            if(ship.pos.y < Y_min_25) {
+                quad3.addShipRange2(ship);
+            }
+            else if(ship.pos.y > Y_plus_25) {
+                quad2.addShipRange2(ship);
+            }
+            else {
+                quad3.addShipRange2(ship);
+                quad2.addShipRange2(ship);
+            }
+        }else if(ship.pos.x > X_plus_25){
+            if(ship.pos.y < Y_min_25) {
+                quad4.addShipRange2(ship);
+            }
+            else if(ship.pos.y > Y_plus_25) {
+                quad1.addShipRange2(ship);
+            }
+            else {
+                quad4.addShipRange2(ship);
+                quad1.addShipRange2(ship);
+            }
+        }else {
+            if(ship.pos.y < Y_min_25) {
+                quad3.addShipRange2(ship);
+                quad4.addShipRange2(ship);
+            }
+            else if(ship.pos.y > Y_plus_25) {
+                quad2.addShipRange2(ship);
+                quad1.addShipRange2(ship);
+            }
+            else {
+                quad1.addShipRange2(ship);
+                quad2.addShipRange2(ship);
+                quad3.addShipRange2(ship);
+                quad4.addShipRange2(ship);
+            }
+        }
+    }
+
     public void addFlagRange(Flag flag){
         //if(x - w/2 - 20 < flag.getPos().x && flag.getPos().x < x + w/2 + 20 && y - h/2 - 20 < flag.getPos().y && flag.getPos().y < y + h/2 + 20){
         if(X_sub_Wdiv2_sub_25 < flag.getPos().x && flag.getPos().x < X_plus_Wdiv2_plus_25 && Y_sub_Hdiv2_sub_25 < flag.getPos().y && flag.getPos().y < Y_plus_Hdiv2_plus_25){
@@ -243,36 +383,14 @@ public class Quadtree {
     }
 
     public void findTargets(){
-        if(divided){
-            //if(depth == 0 || depth == 1){
-            if(depth==0){
-                Thread t1 = new Thread(new Ranger(quad1));
-                Thread t2 = new Thread(new Ranger(quad2));
-                Thread t3 = new Thread(new Ranger(quad3));
-                Thread t4 = new Thread(new Ranger(quad4));
-
-                t1.start();
-                t2.start();
-                t3.start();
-                t4.start();
-
-                try {
-                    t1.join();
-                    t2.join();
-                    t3.join();
-                    t4.join();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-            else{
-                quad1.findTargets();
-                quad2.findTargets();
-                quad3.findTargets();
-                quad4.findTargets();
-            }
+        if(divided) {
+            quad1.findTargets();
+            quad2.findTargets();
+            quad3.findTargets();
+            quad4.findTargets();
         }
         else{
+
             for(int i = 0; i < ships.size(); ++i){
                 float ship1x = ships.get(i).getPos().x;
                 float ship1y = ships.get(i).getPos().y;
@@ -289,6 +407,7 @@ public class Quadtree {
                     }
                 }
             }
+
             for(Ship ship : ships){
                 if(ship.getTarget() == null){
                     for(Flag flag : flags){
@@ -321,15 +440,13 @@ public class Quadtree {
         float distance = axis.len();
         if (distance < 45) {
             if (ship.getObjective() != null && ship.getObjective().getTargetedFlag() == flag) {
-                //axis.rotate(5);// its dt dependent, to rework
-                axis.rotate( 50f * ship.gp.getTime() / 2f / (float)Math.PI / 37f * 360f);
-                //axis.rotate( 360f * ship.team.getSpeed() * ship.team.getSpeed() * ship.gp.getTime() / 2f / (float)Math.PI / 37f);
+                axis.rotateRad( 50f * ship.gp.dt / 37f);
                 axis.nor();
-                axis.scl(37);
-                axis.add(flag.getPos());
-                axis.sub(ship.getPos());
-                axis.scl(2);
-                ship.addVel(axis);
+                axis.scl(37f);
+                Vector2 impulse = axis.add(flag.getPos()).sub(ship.getPos());
+                impulse.nor();
+                impulse.scl(1f);
+                ship.addVel(impulse);
             } else {
                 //final int k = 10;
                 final int k = 1;

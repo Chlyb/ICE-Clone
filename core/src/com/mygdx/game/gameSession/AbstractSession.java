@@ -126,15 +126,24 @@ public abstract class AbstractSession extends AbstractScreen implements GestureD
             else upgradeLabel.setVisible(false);
 
             if(!finishing){
+                boolean gameEnd = false;
                 for (Team team : renderedGp.getTeams()){
-                    if(team.getFlagCount() == renderedGp.getFlags().size()) end(true);
+                    if(team.getFlagCount() == renderedGp.getFlags().size()) {
+                        gameEnd = true;
+                        break;
+                    }
                 }
+
                 if(renderedGp.getTeams().get(playerTeamIndex).getFlagCount() == 0){
                     endLabel.setText("GAME OVER");
                     end(false);
                 }
-                else if(renderedGp.getTeams().get(playerTeamIndex).getFlagCount() == renderedGp.getFlags().size()){
+
+                if(renderedGp.getTeams().get(playerTeamIndex).getFlagCount() == renderedGp.getFlags().size()){
                     endLabel.setText("VICTORY!");
+                    end(true);
+                }
+                else if(gameEnd) {
                     end(true);
                 }
             }

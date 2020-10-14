@@ -21,4 +21,8 @@ public abstract class Entity implements Serializable {
         this.team = team;
         this.pos = pos;
     }
+
+    Entity() {
+        this.gp = null;
+    }
 }

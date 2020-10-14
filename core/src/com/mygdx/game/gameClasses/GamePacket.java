@@ -1,4 +1,5 @@
 package com.mygdx.game.gameClasses;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -7,7 +8,8 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
-
+import com.badlogic.gdx.math.Vector2;
+import com.mygdx.game.CompressionUtils;
 import com.mygdx.game.workers.CollisionUpdate;
 import com.mygdx.game.workers.RangeUpdate;
 
@@ -18,8 +20,17 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.ConcurrentModificationException;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class GamePacket implements Serializable{
@@ -31,32 +42,162 @@ public class GamePacket implements Serializable{
     private List<Flag> flags;
     private List<Link> links;
     private Team neutralTeam;
-    private float time;
+
+    transient float dt;
+    //Quadtree collisionTree;
+    transient ExecutorService exe;
 
     public GamePacket()
     {
-        teams = new ArrayList<Team>();
-        ships = new ArrayList<Ship>();
-        flags = new ArrayList<Flag>();
-        links = new ArrayList<Link>();
+        teams = new LinkedList<Team>();
+        ships = new LinkedList<Ship>();
+        flags = new LinkedList<Flag>();
+        links = new LinkedList<Link>();
 
         neutralTeam = new Team(this, 0);
         neutralTeam.setHealth(3);
-        time = 0;
+
+        exe = Executors.newFixedThreadPool(2);
+    }
+
+    private void writeObject(ObjectOutputStream stream) throws IOException {
+        Map<Team, Short> teamId = new HashMap<>();
+        short tId = 0;
+        for(Team team : teams) {
+            teamId.put(team, tId);
+            ++tId;
+        }
+
+        Map<Entity, Short> entId = new HashMap<>();
+        short id = 0;
+        for(Flag flag: flags) {
+            entId.put(flag, id);
+            ++id;
+        }
+        for(Ship ship : ships) {
+            entId.put(ship, id);
+            ++id;
+        }
+        entId.put(null, (short) -1);
+
+        stream.writeShort(teams.size());
+        stream.writeShort(flags.size());
+        stream.writeShort(ships.size());
+        stream.writeShort(links.size());
+
+        for(Team team : teams) {
+            stream.writeObject(team);
+        }
+
+        for(Flag flag : flags) {
+            flag.writeObject(stream);
+            stream.writeShort( teamId.get(flag.team));
+        }
+
+        for(Ship ship : ships) {
+            ship.writeObject(stream);
+            stream.writeShort( teamId.get(ship.team));
+        }
+
+        for(Ship ship : ships) {
+            stream.writeShort( entId.get(ship.target));
+        }
+
+        for(Link link : links) {
+            stream.writeShort( entId.get(link.flag1));
+            stream.writeShort( entId.get(link.flag2));
+        }
+
+        stream.writeShort( teamId.get(neutralTeam));
+    }
+
+    private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException {
+        short teamCount = stream.readShort();
+        short flagCount = stream.readShort();
+        short shipCount = stream.readShort();
+        short linkCount = stream.readShort();
+
+        Team [] teamArr = new Team[teamCount];
+        Flag [] flagArr = new Flag[flagCount];
+        Ship [] shipArr = new Ship[shipCount];
+
+        for(int i = 0; i < teamCount; ++i) {
+            teamArr[i] = (Team) stream.readObject();
+        }
+
+        for(int i = 0; i < flagCount; ++i) {
+            float posX = CompressionUtils.toFloat32(stream.readShort());
+            float posY = CompressionUtils.toFloat32(stream.readShort());
+            float health = CompressionUtils.toFloat32(stream.readShort());
+            float angle = stream.readFloat();
+            short teamId = stream.readShort();
+
+            Flag flag = new Flag();
+            flag.pos = new Vector2(posX, posY);
+            flag.angle = angle;
+            flag.health = health;
+            flag.team = teamArr[teamId];
+            flagArr[i] = flag;
+        }
+
+        for(int i = 0; i < shipCount; ++i) {
+            float posX = CompressionUtils.toFloat32(stream.readShort());
+            float posY = CompressionUtils.toFloat32(stream.readShort());
+            float velX = CompressionUtils.toFloat32(stream.readShort());
+            float velY = CompressionUtils.toFloat32(stream.readShort());
+            float angle = CompressionUtils.toFloat32(stream.readShort());
+            short teamId = stream.readShort();
+
+            Ship ship = new Ship();
+            ship.pos = new Vector2(posX, posY);
+            ship.vel = new Vector2(velX, velY);
+            ship.angle = angle;
+            ship.team = teamArr[teamId];
+            shipArr[i] = ship;
+        }
+
+        for(int i = 0; i < shipCount; ++i) {
+            short entId = stream.readShort();
+            if(entId != -1)
+                shipArr[i].target = entId < flagCount ? flagArr[entId] : shipArr[entId - flagCount];
+        }
+
+        links = new LinkedList<>();
+        for(int i = 0; i < linkCount; ++i) {
+            Flag flag1  = flagArr[stream.readShort()];
+            Flag flag2  = flagArr[stream.readShort()];
+            Link link = new Link(flag1, flag2);
+            links.add(link);
+        }
+
+        teams = Arrays.asList(teamArr);
+        flags = Arrays.asList(flagArr);
+        ships = Arrays.asList(shipArr);
+
+        neutralTeam = teamArr[stream.readShort()];
     }
 
     public void update( AtomicLong physicsTime) {
-        List<Ship> shipsToDeletion = new ArrayList<Ship>();
+        for(Flag flag : flags){
+            flag.move(dt);
+        }
 
         for(Ship ship : ships){
-            if(ship.getHealth() <= 0) shipsToDeletion.add(ship);
-            else{
+            ship.move(dt);
+            ship.updateShooting(dt);
+        }
+
+        List<Ship> shipsToDeletion = new LinkedList<Ship>();
+
+        for(Ship ship : ships){
+            if(ship.getHealth() <= 0)
+                shipsToDeletion.add(ship);
+            else
                 ship.updateMoving();
-            }
         }
 
         for(Ship ship : shipsToDeletion){
-            ship.delete(); //because you cant modify list while iterating through it
+            ship.delete();
         }
 
         for(Flag flag : flags){
@@ -67,32 +208,24 @@ public class GamePacket implements Serializable{
             team.update();
         }
 
-        Thread t1 = new Thread(new CollisionUpdate(this));
-        Thread t2 = new Thread(new RangeUpdate(this));
+        Future f1 = exe.submit(new CollisionUpdate(this));
+        Future f2 = exe.submit(new RangeUpdate(this));
 
-        t1.start();
-        t2.start();
-
-        try {
-            t1.join();
-            t2.join();
-        } catch (InterruptedException e) {
+        try{
+            f1.get();
+            f2.get();
+        }catch(Exception e){
             e.printStackTrace();
         }
 
-        float dt = ( System.currentTimeMillis() - physicsTime.get())/1000.0f;
-        physicsTime.set( System.currentTimeMillis());
-
-        for(Flag flag : flags){
-            flag.move(dt);
-        }
-
         for(Ship ship : ships){
-            ship.move(dt);
-            ship.updateShooting(dt);
+            Vector2 vel = ship.getVel();
+            if(vel.len2() > 1.0)
+                vel.nor();
         }
 
-        this.time = dt;
+        dt = ( System.currentTimeMillis() - physicsTime.get())/1000.0f;
+        physicsTime.set( System.currentTimeMillis());
     }
 
     public void render(float delta, OrthographicCamera cam, ShapeRenderer sr, SpriteBatch sb, BitmapFont bf, int playerTeamIndex, short shootOffset){
@@ -128,6 +261,8 @@ public class GamePacket implements Serializable{
             for (Objective objective : playerTeam.getObjectives()) {
                 sr.circle(objective.getX(), objective.getY(), 32, 20);
             }
+
+            //collisionTree.draw(sr);
 
             Gdx.gl.glLineWidth(2 / cam.zoom);
             sr.end();
@@ -179,14 +314,10 @@ public class GamePacket implements Serializable{
             ObjectOutputStream os = new ObjectOutputStream(out);
             os.writeObject(this);
             return out.toByteArray();
-        } catch(ConcurrentModificationException e) {
+        } catch(Exception e) {
+            e.printStackTrace();
             return null;
         }
-        catch(IOException e) {
-            return null;
-            //e.printStackTrace();
-        }
-        //return null;
     }
 
     public static GamePacket getObject( byte[] bytes){
@@ -196,28 +327,14 @@ public class GamePacket implements Serializable{
             ObjectInputStream is = new ObjectInputStream(in);
             GamePacket gp = (GamePacket) is.readObject();
             return gp;
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            return null;
-        }
-        //return null;
+        }  
     }
 
     public GamePacket clone(){
         return getObject( getBytes());
-    }
-
-    public void goOneTickBack(){
-        for(Ship ship : ships){
-            ship.move( -time);
-        }
-
-        for(Flag flag : getFlags()){
-            flag.move( -time);
-        }
     }
 
     public void addTeam(Team team){
@@ -233,7 +350,6 @@ public class GamePacket implements Serializable{
     public void addLink(Link link){
         links.add(link);
     }
-    public float getTime(){return time;}
     public Team getNeutralTeam(){ return neutralTeam;}
     public List<Ship> getShips(){ return ships;}
     public List<Link> getLinks(){ return links;}

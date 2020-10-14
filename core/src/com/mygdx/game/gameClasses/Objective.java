@@ -13,7 +13,6 @@ public class Objective implements Serializable {
     public Objective(Team team, Vector2 pos) {
         this.team = team;
         this.targetedFlag = null;
-        //System.out.println("NOWY OBJECTIVE");
 
         for(Flag flag : team.gp.getFlags()){
             Vector2 axis = pos.cpy();
@@ -23,8 +22,10 @@ public class Objective implements Serializable {
                 break;
             }
         }
-        if(targetedFlag != null) this.pos = targetedFlag.pos;//Sooo it turns out that you cant change initialized variable but assigning null it not initializing
-        else this.pos = pos;
+        if(targetedFlag != null)
+            this.pos = targetedFlag.pos;
+        else
+            this.pos = pos;
 
         team.addObjective(this);
         //team.reassignObjectives();
@@ -32,7 +33,6 @@ public class Objective implements Serializable {
 
     public void delete(){
         team.removeObjective(this);
-        //team.assignObjectives();
     }
 
     public Flag getTargetedFlag() {

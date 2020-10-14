@@ -1,6 +1,8 @@
 package com.mygdx.game.gameClasses;
 
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class Link implements Serializable {
@@ -17,6 +19,11 @@ public class Link implements Serializable {
             flag2.addLinkedFlag(flag1);
             gp.addLink(this);
         }
+    }
+    Link(Flag flag1, Flag flag2){
+        this.gp = null;
+        this.flag1 = flag1;
+        this.flag2 = flag2;
     }
 
     public Boolean dupilcated(){

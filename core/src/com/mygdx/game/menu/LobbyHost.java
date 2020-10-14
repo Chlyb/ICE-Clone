@@ -44,11 +44,7 @@ public class LobbyHost extends AbstractScreen {
         super(game, multiplayerMenu);
         this.multiplayerMenu = multiplayerMenu;
 
-        groupAddress += (int)(224 + Math.random() * 15);
-        groupAddress += ".";
-        groupAddress += (int)(Math.random() * 240);
-        groupAddress += ".0.0";
-
+        groupAddress = "225.0.0.0";
         createListener();
 
         Label chatLabel = new Label("Chat", skin, "default");
@@ -157,29 +153,26 @@ public class LobbyHost extends AbstractScreen {
     }
 
     public void createListener(){
-        new Thread(new Runnable(){ //UDP BROADCAST THREAD
-            @Override
-            public void run() {
-                try {
-                    socket = new DatagramSocket(serverPort, InetAddress.getByName("0.0.0.0"));
-                    socket.setBroadcast(true);
-                    while (true) {
-                        byte[] recvBuf = new byte[256];
-                        DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
-                        socket.receive(packet);
+        new Thread(() -> { //receiving thread
+            try {
+                socket = new DatagramSocket(serverPort, InetAddress.getByName("0.0.0.0"));
+                socket.setBroadcast(true);
+                while (true) {
+                    byte[] recvBuf = new byte[256];
+                    DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
+                    socket.receive(packet);
 
-                        String message = new String(packet.getData()).trim();
-                        processPacket( packet);
+                    String message = new String(packet.getData()).trim();
+                    processPacket( packet);
 
-                        if (message.equals("r")) {
-                            byte[] sendData = ("r" + groupAddress).getBytes(); //response
-                            DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
-                            socket.send(sendPacket);
-                        }
+                    if (message.equals("r")) {
+                        byte[] sendData = ("r" + groupAddress).getBytes(); //response
+                        DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
+                        socket.send(sendPacket);
                     }
-                } catch (IOException ex) {
-                    ex.printStackTrace();
                 }
+            } catch (IOException ex) {
+                ex.printStackTrace();
             }
         }).start();
     }
@@ -212,8 +205,8 @@ public class LobbyHost extends AbstractScreen {
             socket = new DatagramSocket();
             group = InetAddress.getByName(groupAddress);
             buf = message.getBytes();
-
             DatagramPacket packet = new DatagramPacket(buf, buf.length, group, clientPort);
+
             socket.send(packet);
             socket.close();
         }catch (IOException e){}

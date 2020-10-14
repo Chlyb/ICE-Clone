@@ -1,18 +1,22 @@
 package com.mygdx.game.gameSession;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.utils.Timer;
 import com.mygdx.game.MyGdxGame;
 import com.mygdx.game.gameClasses.Flag;
 import com.mygdx.game.gameClasses.GamePacket;
 import com.mygdx.game.gameClasses.Team;
-import com.mygdx.game.menu.AbstractScreen;
 import com.mygdx.game.menu.ResumeScreen;
 import com.mygdx.game.menu.SinglePlayerMenu;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
+
+import javax.swing.plaf.synth.SynthScrollBarUI;
 
 public final class SinglePlayerSession extends AbstractSession {
     private GamePacket gp;
@@ -51,28 +55,38 @@ public final class SinglePlayerSession extends AbstractSession {
 
         physicsTime.set(System.currentTimeMillis());
 
-        final Runnable copyToRender = new Runnable() {
-            @Override
+        class ToRenderRunnable implements Runnable {
+            byte[] gpBytes;
+            public ToRenderRunnable(byte[] gpBytes) {
+                this.gpBytes = gpBytes;
+            }
+
             public void run() {
-                GamePacket clone = gp.clone();
-                if(clone == null) return;
-                renderedGp = clone;
-                renderedGp.goOneTickBack();
+                renderedGp = GamePacket.getObject(gpBytes);
                 updateUI();
                 renderTime.set(System.currentTimeMillis());
             }
-        };
+        }
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() { //Update thread
-                while (!finished) {
-                    if (!paused.get()){
-                        gp.update(physicsTime);
-                        for (Team team : gp.getTeams()) {
-                            if (team != gp.getNeutralTeam() && team != playerTeam) team.AItrigger();
-                        }
-                        new Thread(copyToRender).start();
+        new Thread(() -> { //Update thread
+            ExecutorService exe = Executors.newSingleThreadExecutor();
+
+            while (!finished) {
+                if (!paused.get()){
+                    long t0 = System.currentTimeMillis();
+                    gp.update(physicsTime);
+
+                    for (Team team : gp.getTeams()) {
+                        if (team != gp.getNeutralTeam() && team != playerTeam) team.AItrigger();
+                    }
+
+                    byte[] gpBytes = gp.getBytes();
+                    exe.execute(new ToRenderRunnable(gpBytes));
+                    try {
+                        Thread.sleep(33 - (System.currentTimeMillis() - t0));
+                    }
+                    catch(Exception e){
+                        e.printStackTrace();
                     }
                 }
             }
@@ -81,17 +95,14 @@ public final class SinglePlayerSession extends AbstractSession {
 
     @Override
     void end(boolean definitive) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                finishing = true;
-                try {
-                    Thread.sleep(3000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                dispose();
+        finishing = true;
+        new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
+            dispose();
         }).start();
     }
 

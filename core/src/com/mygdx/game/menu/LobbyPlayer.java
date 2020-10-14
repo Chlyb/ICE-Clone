@@ -1,5 +1,7 @@
 package com.mygdx.game.menu;
 
+//import android.util.Log;
+
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Touchable;
@@ -139,7 +141,7 @@ public class LobbyPlayer extends AbstractScreen {
         new Thread(new Runnable(){
             byte[] buf = new byte[256];
             @Override
-            public void run() {  //UDP
+            public void run() {  //receiving thread
                 try {
                     receivingSocket = new MulticastSocket(clientPort);
                     InetAddress group = InetAddress.getByName( groupAddress);

@@ -73,9 +73,8 @@ public class Team implements Serializable {
     }
 
     public void update(){
-        if(score > scoreToNextLevel){
-            System.out.println(scoreToNextLevel);
-            score = score % scoreToNextLevel;
+        while (score > scoreToNextLevel) {
+            score = score - scoreToNextLevel;
             ++availableUpgrades;
             ++level;
             scoreToNextLevel += 100;
@@ -105,7 +104,7 @@ public class Team implements Serializable {
                 ++level;
             }
             else if(upgrade == 2 && speedLevel < 10){
-                speed += 5;
+                speed += 50;
                 ++speedLevel;
                 --availableUpgrades;
                 ++level;

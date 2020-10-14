@@ -1,7 +1,11 @@
 package com.mygdx.game.gameClasses;
 
 import com.badlogic.gdx.math.Vector2;
+import com.mygdx.game.CompressionUtils;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -11,7 +15,7 @@ import java.util.List;
 public class Flag extends Entity implements Serializable {
     transient private List<Flag> linkedFlags;
     transient public Ship shotBy; //to rework
-    private float health;
+    float health;
 
     public float angle;
     transient private float cooldown;
@@ -27,6 +31,16 @@ public class Flag extends Entity implements Serializable {
 
         angle = (int) (Math.random() * 360);
     }
+
+    Flag(){super();}
+
+    void writeObject(ObjectOutputStream stream) throws IOException {
+        stream.writeShort(CompressionUtils.toFloat16(pos.x));
+        stream.writeShort(CompressionUtils.toFloat16(pos.y));
+        stream.writeShort(CompressionUtils.toFloat16(health));
+        stream.writeFloat(angle);
+    }
+
     public void update(){
         if(cooldown <= 0){
             if(team.spawnShip()){
@@ -35,8 +49,7 @@ public class Flag extends Entity implements Serializable {
                 v.rotate(angle);
                 Ship ship = new Ship(gp, team, v.add(pos));
                 ship.angle = angle - 180;
-                //cooldown = 1.5f;
-                cooldown = 0;
+                cooldown = 1.5f;
             }
         }
     }
@@ -163,7 +176,6 @@ public class Flag extends Entity implements Serializable {
     public Team getTeam() {
         return team;
     }
-    public float getCooldown(){return cooldown;}
     public void setHealth(int health){this.health = health;}
     public Vector2 getVel(){return Vector2.Zero;}
 

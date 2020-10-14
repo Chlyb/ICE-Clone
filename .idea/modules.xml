@@ -3,9 +3,10 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ICE-Clone.iml" filepath="$PROJECT_DIR$/ICE-Clone.iml" />
-      <module fileurl="file://$PROJECT_DIR$/android/android.iml" filepath="$PROJECT_DIR$/android/android.iml" />
-      <module fileurl="file://$PROJECT_DIR$/core/core.iml" filepath="$PROJECT_DIR$/core/core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/desktop/desktop.iml" filepath="$PROJECT_DIR$/desktop/desktop.iml" />
+      <module fileurl="file://$PROJECT_DIR$/StudioProjects-ICE-Clone.iml" filepath="$PROJECT_DIR$/StudioProjects-ICE-Clone.iml" group="ICE-Clone" />
+      <module fileurl="file://$PROJECT_DIR$/android/android.iml" filepath="$PROJECT_DIR$/android/android.iml" group="ICE-Clone/android" />
+      <module fileurl="file://$PROJECT_DIR$/core/core.iml" filepath="$PROJECT_DIR$/core/core.iml" group="ICE-Clone/core" />
+      <module fileurl="file://$PROJECT_DIR$/desktop/desktop.iml" filepath="$PROJECT_DIR$/desktop/desktop.iml" group="ICE-Clone/desktop" />
     </modules>
   </component>
 </project>

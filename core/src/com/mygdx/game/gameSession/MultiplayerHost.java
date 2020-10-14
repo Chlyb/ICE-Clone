@@ -15,6 +15,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static com.mygdx.game.menu.MultiplayerMenuScreen.sessionPort;
@@ -26,10 +28,7 @@ public class MultiplayerHost extends AbstractSession {
     private GamePacket gp;
     private Team playerTeam;
     private AtomicLong physicsTime = new AtomicLong(0);
-    private long sendTime = System.currentTimeMillis();
     private byte tick = 0;
-    public static final int fragmentCount = 8;
-    public static final int payload = 1471;
 
     private DatagramSocket receivingSocket;
 
@@ -47,7 +46,7 @@ public class MultiplayerHost extends AbstractSession {
 
         physicsTime.set(System.currentTimeMillis());
 
-        new Thread(new Runnable() { //UDP
+        new Thread(new Runnable() { //receiving thread
             byte[] buf = new byte[256];
 
             @Override
@@ -60,97 +59,56 @@ public class MultiplayerHost extends AbstractSession {
                         receivingSocket.receive(packet);
                         processPacket(packet);
                     }
-                } catch (IOException ex) {
+                } catch (Exception ex) {
                     ex.printStackTrace();
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
                 }
             }
         }).start();
 
-        final Runnable copyToSendAndRender = new Runnable() {
-            @Override
+        class CopyToSendAndRenderRunnable implements Runnable {
+            byte[] gpBytes;
+            public CopyToSendAndRenderRunnable(byte[] gpBytes) {
+                this.gpBytes = gpBytes;
+            }
+
             public void run() {
-                byte[] bytes = gp.getBytes();
-				if(bytes == null) return;
-
-                if(System.currentTimeMillis() - sendTime > 100) { //big tickrate causes nothing but problems
-                    try {
-                        byte[] buf = CompressionUtils.compress(bytes);
-                        DatagramSocket socket = new DatagramSocket();
-                        InetAddress group = InetAddress.getByName(getLobby().groupAddress);
-
-                        DatagramPacket packet;
-                        /*
-                        byte[] subarr;
-
-                        for (int i = 0; i < fragmentCount; ++i) {
-                            if ((i + 1) * (payload) < buf.length) {
-                                subarr = new byte[payload + 1];
-                                System.arraycopy(buf, i * (payload), subarr, 0, payload);
-                                subarr[payload] = tick;
-                                packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
-                            } else if (i * payload < buf.length) {
-                                subarr = new byte[buf.length - i * payload + 1];
-                                System.arraycopy(buf, i * payload, subarr, 0, buf.length - i * payload);
-                                subarr[buf.length - i * payload] = tick;
-                                packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
-
-                            } else {
-                                subarr = new byte[1];
-                                subarr[0] = tick;
-                                packet = new DatagramPacket(subarr, 0, subarr.length, group, clientPort + i);
-                            }
-                            socket.send(packet);
-                        }*/
-
-                        byte swap;
-                        byte empty[] = new byte[1];
-
-                        for(int i = 0; i < fragmentCount; ++i){
-                            if((i+1)*payload < buf.length){//o tu zmiana
-                                swap = buf[(i+1)*payload];
-                                buf[(i+1)*payload] = tick;
-                                DatagramPacket dp = new DatagramPacket(buf, i * payload, payload + 1, group, clientPort + i);
-                                socket.send(dp);
-                                buf[(i+1)*payload] = swap;
-                            }
-                            else if(i*payload < buf.length){
-                                byte end[] = new byte[buf.length - i*payload + 1];
-                                System.arraycopy( buf, i * payload, end, 0 , buf.length - i*payload );
-                                end[end.length - 1] = tick;
-
-                                DatagramPacket dp = new DatagramPacket(end, 0, end.length, group, clientPort + i);
-                                socket.send(dp);
-                            }
-                            else{
-                                empty[0] = tick;
-                                DatagramPacket dp = new DatagramPacket(empty, 1, group, clientPort + i);
-                                socket.send(dp);
-                            }
-                        }
-
-                        socket.close();
-                        sendTime = System.currentTimeMillis();
-                    } catch (IOException e) {
-                    }
+                try {
+                    byte[] buf = CompressionUtils.compress(gpBytes);
+                    DatagramSocket socket = new DatagramSocket();
+                    InetAddress group = InetAddress.getByName(getLobby().groupAddress);
+                    DatagramPacket dp = new DatagramPacket(buf, 0, buf.length, group, clientPort);
+                    socket.send(dp);
+                }catch (Exception e) {
+                    e.printStackTrace();
                 }
-                GamePacket clone = GamePacket.getObject(bytes);
-                if(clone == null) return;
-                renderedGp = clone;
+
+                renderedGp = GamePacket.getObject(gpBytes);
                 updateUI();
                 renderTime.set(System.currentTimeMillis());
             }
-        };
+        }
 
         new Thread(new Runnable() {
+            ExecutorService exe = Executors.newSingleThreadExecutor();
             @Override
             public void run() { //Update thread
                 while (!finished) {
                     if (!paused.get()) {
+                        long t0 = System.currentTimeMillis();
+
                         gp.update(physicsTime);
-                        new Thread(copyToSendAndRender).start();
+                        byte[] gpBytes = gp.getBytes();
+
+                        if(tick%3 == 0)
+                            exe.execute(new CopyToSendAndRenderRunnable(gpBytes));
                         ++tick;
+
+                        try {
+                            Thread.sleep(33 - (System.currentTimeMillis() - t0));
+                        }
+                        catch(Exception e){
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -161,17 +119,14 @@ public class MultiplayerHost extends AbstractSession {
     void end(final boolean definitive) {
         if(definitive) {
             finishing = true;
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Thread.sleep(3000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    finished = true;
-                    dispose();
+            new Thread(() -> {
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+                finished = true;
+                dispose();
             }).start();
         }
     }
@@ -220,7 +175,6 @@ public class MultiplayerHost extends AbstractSession {
     @Override
     public void dispose(){
         receivingSocket.close();
-        stage.dispose();
         super.dispose();
 
         lobby.createListener();

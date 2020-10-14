@@ -183,9 +183,7 @@ public class MultiplayerMenuScreen extends AbstractScreen {
             t.start();
             Thread.sleep(400);
             c.close();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        } catch (InterruptedException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

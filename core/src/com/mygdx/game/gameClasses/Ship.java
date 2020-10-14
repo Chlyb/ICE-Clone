@@ -1,13 +1,17 @@
 package com.mygdx.game.gameClasses;
 
 import com.badlogic.gdx.math.Vector2;
+import com.mygdx.game.CompressionUtils;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
 public class Ship extends Entity implements Serializable {
-    private Vector2 vel;
+    Vector2 vel;
     public float angle;
-    private Entity target;
+    Entity target;
     transient private Objective objective;
     transient private float health;
 
@@ -22,6 +26,15 @@ public class Ship extends Entity implements Serializable {
 
         gp.addShip(this);
         team.addShip(this);
+    }
+    Ship(){super();}
+
+    void writeObject(ObjectOutputStream stream) throws IOException {
+        stream.writeShort(CompressionUtils.toFloat16(pos.x));
+        stream.writeShort(CompressionUtils.toFloat16(pos.y));
+        stream.writeShort(CompressionUtils.toFloat16(vel.x));
+        stream.writeShort(CompressionUtils.toFloat16(vel.y));
+        stream.writeShort(CompressionUtils.toFloat16(angle));
     }
 
     public void shoot(float dt){
@@ -60,7 +73,6 @@ public class Ship extends Entity implements Serializable {
     }
 
     public void move(float dt){
-        if(vel.len2() > 1) vel.nor();
         Vector2 scaled = vel.cpy();
         scaled.scl( team.getSpeed() * dt);
         pos.add(scaled);

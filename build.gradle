@@ -82,7 +82,7 @@ project(":core") {
     dependencies {
         compile "com.badlogicgames.gdx:gdx:$gdxVersion"
         compile "com.badlogicgames.gdx:gdx-freetype:$gdxVersion"
-        
+        compile files("C:\\Users\\tomip\\AppData\\Local\\Android\\Sdk\\platforms\\android-28\\android.jar")
     }
 }
 

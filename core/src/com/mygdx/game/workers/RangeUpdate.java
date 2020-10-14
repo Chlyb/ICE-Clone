@@ -13,10 +13,12 @@ public class RangeUpdate implements Runnable {
     }
 
     public void run() {
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        long t0 = System.currentTimeMillis();
         Quadtree rangeTree = new Quadtree(1920/2-100,1080/2-100,1920+200,1080+200,0);
 
         for(Ship ship : gp.getShips()){
-            rangeTree.addShipRange(ship);
+            rangeTree.addShipRange2(ship);
         }
 
         for(Flag flag : gp.getFlags()){
@@ -24,5 +26,6 @@ public class RangeUpdate implements Runnable {
         }
 
         rangeTree.findTargets();
+        //System.out.println("DT RU= " + (System.currentTimeMillis() - t0));
     }
 }
